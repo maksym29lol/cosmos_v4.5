@@ -1,0 +1,2462 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cosmos v4.5 — Космічний Провідник</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Exo+2:ital,wght@0,100;0,300;0,400;0,600;0,800;1,300&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+/* ── BASE STYLES ── */
+*{margin:0;padding:0;box-sizing:border-box;scrollbar-width:thin;scrollbar-color:rgba(0,210,255,.2) transparent}
+*::-webkit-scrollbar{width:4px}
+*::-webkit-scrollbar-thumb{background:var(--c1);border-radius:2px;opacity:0.5;}
+
+:root{
+  --c1:#00d2ff;
+  --c2:#a855f7;
+  --c3:#f97316;
+  --c4:#22c55e;
+  --c5:#f43f5e;
+  --bg:#020408;
+  --bg2:#060c18;
+  --bg3:#0a1428;
+  --bg4:#0e1c38;
+  --border:color-mix(in srgb, var(--c1) 15%, transparent);
+  --border2:color-mix(in srgb, var(--c1) 30%, transparent);
+  --border3:rgba(168,85,247,.3);
+  --text:#ddeeff;
+  --muted:rgba(221,238,255,.45);
+  --glow:0 0 40px color-mix(in srgb, var(--c1) 20%, transparent);
+  --font-main:'Exo 2',sans-serif;
+  --font-display:'Rajdhani',sans-serif;
+}
+
+body{
+  font-family:var(--font-main);
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  overflow-x:hidden;
+  cursor:default;
+}
+
+/* ANIMATED STARFIELD */
+.starfield{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;}
+.starfield canvas{position:absolute;inset:0;}
+
+/* Nebula BG */
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background:
+    radial-gradient(ellipse 60% 40% at 15% 20%, rgba(168,85,247,.06), transparent),
+    radial-gradient(ellipse 40% 60% at 80% 70%, color-mix(in srgb, var(--c1) 5%, transparent), transparent),
+    radial-gradient(ellipse 30% 50% at 50% 50%, rgba(249,115,22,.03), transparent);
+  pointer-events:none;z-index:0;
+}
+
+.layout{
+  display:grid;
+  grid-template-columns:82px 1fr;
+  height:100vh;
+  position:relative;z-index:1;
+}
+
+/* ── SIDEBAR NAV ── */
+.nav{
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;align-items:center;
+  padding:18px 0 14px;gap:3px;
+  background:rgba(2,4,8,.94);
+  backdrop-filter:blur(30px);
+  width:82px;overflow:visible;
+  position:relative;z-index:10;
+}
+.nav-logo-wrap{display:flex;flex-direction:column;align-items:center;gap:3px;margin-bottom:10px;}
+.logo{
+  font-family:var(--font-display);font-size:12px;font-weight:700;
+  letter-spacing:5px;writing-mode:vertical-rl;
+  background:linear-gradient(180deg,var(--c1),var(--c2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+  text-transform:uppercase;
+  filter:drop-shadow(0 0 16px var(--c1));
+  user-select:none;
+}
+.nav-version{font-size:8px;color:color-mix(in srgb, var(--c1) 40%, transparent);letter-spacing:2px;font-family:var(--font-display);}
+
+.nav-clock{
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+  padding:8px 5px;border-radius:10px;
+  border:1px solid var(--border);
+  background:color-mix(in srgb, var(--c1) 3%, transparent);
+  margin:0 5px 8px;width:68px;
+}
+.nav-clock .utc-label{font-size:8px;letter-spacing:2.5px;color:color-mix(in srgb, var(--c1) 50%, transparent);text-transform:uppercase;font-family:var(--font-display);}
+.nav-clock .utc-time{font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--c1);letter-spacing:1px;font-variant-numeric:tabular-nums;}
+.nav-clock .utc-date{font-size:8px;color:var(--muted);font-family:var(--font-display);}
+
+.nav-divider{width:36px;height:1px;background:linear-gradient(90deg,transparent,var(--border2),transparent);margin:5px 0;}
+
+.nav-btn{
+  width:46px;height:46px;border-radius:13px;
+  border:1px solid transparent;background:transparent;
+  color:var(--muted);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:.2s;position:relative;flex-shrink:0;
+}
+.nav-btn:hover{background:color-mix(in srgb, var(--c1) 7%, transparent);border-color:var(--border);color:var(--c1);}
+.nav-btn.active{background:color-mix(in srgb, var(--c1) 12%, transparent);border-color:var(--border2);color:var(--c1);box-shadow:0 0 20px color-mix(in srgb, var(--c1) 15%, transparent);}
+.nav-btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.tip{
+  position:absolute;left:58px;top:50%;transform:translateY(-50%);
+  background:rgba(6,12,24,.98);border:1px solid var(--border2);
+  border-radius:8px;padding:5px 11px;white-space:nowrap;
+  font-size:11px;color:var(--text);font-family:var(--font-display);
+  pointer-events:none;opacity:0;transition:.15s;z-index:9999;
+  letter-spacing:.5px;
+}
+.nav-btn:hover .tip,.mission-dot:hover .tip,.fav-item:hover .tip{opacity:1;}
+
+.nav-sec-label{font-size:8px;text-transform:uppercase;letter-spacing:2px;color:color-mix(in srgb, var(--c1) 40%, transparent);margin:5px 0 2px;font-family:var(--font-display);}
+
+.nav-missions{margin:4px 6px 0;width:68px;display:flex;flex-direction:column;gap:3px;}
+.mission-dot{
+  display:flex;align-items:center;gap:5px;
+  padding:5px 6px;border-radius:9px;
+  border:1px solid var(--border);background:color-mix(in srgb, var(--c1) 2%, transparent);
+  cursor:pointer;transition:.2s;position:relative;
+}
+.mission-dot:hover{border-color:var(--border2);background:color-mix(in srgb, var(--c1) 6%, transparent);}
+.mission-dot .mdot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.mission-dot .mname{font-size:8px;color:var(--muted);letter-spacing:.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:38px;font-family:var(--font-display);}
+.mission-dot .tip{left:72px;min-width:200px;}
+
+.nav-bottom{margin-top:auto;display:flex;flex-direction:column;align-items:center;gap:5px;padding:0 6px;width:100%;}
+
+/* XP SYSTEM UI */
+.nav-xp-wrap{width:68px;padding:6px;border-radius:10px;border:1px solid var(--border2);background:color-mix(in srgb, var(--c1) 5%, transparent);text-align:center;position:relative;cursor:help;}
+.xp-level{font-family:var(--font-display);font-size:12px;font-weight:700;color:var(--c1);margin-bottom:3px;}
+.xp-bar{height:4px;border-radius:2px;background:rgba(255,255,255,.1);overflow:hidden;margin-bottom:4px;}
+.xp-fill{height:100%;background:linear-gradient(90deg,var(--c1),var(--c2));width:0%;transition:width 0.5s ease;}
+.xp-rank{font-size:7.5px;color:var(--text);letter-spacing:.5px;text-transform:uppercase;font-family:var(--font-display);}
+.nav-xp-wrap:hover .tip{opacity:1;}
+
+/* ── MAIN AREA ── */
+.main{display:flex;flex-direction:column;overflow:hidden;}
+
+.topbar{
+  padding:16px 28px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:16px;
+  background:rgba(2,4,8,.7);backdrop-filter:blur(24px);flex-shrink:0;
+  position:relative;
+}
+.topbar-left{display:flex;align-items:center;gap:12px;flex:1;min-width:0;}
+.topbar h1{
+  font-family:var(--font-display);font-size:24px;font-weight:700;
+  background:linear-gradient(90deg,var(--c1),var(--text));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  letter-spacing:.5px;
+}
+.topbar-category{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;font-family:var(--font-display);white-space:nowrap;}
+
+.view-tabs{display:flex;gap:4px;flex-wrap:wrap;}
+.tab{
+  padding:7px 14px;border-radius:9px;font-size:12px;cursor:pointer;
+  color:var(--muted);border:1px solid transparent;transition:.2s;
+  background:transparent;font-family:var(--font-display);letter-spacing:.5px;
+  font-weight:600;
+}
+.tab:hover{color:var(--c1);}
+.tab.active{background:color-mix(in srgb, var(--c1) 10%, transparent);border-color:var(--border2);color:var(--c1);}
+
+.badge{
+  font-size:11px;padding:4px 12px;border-radius:20px;
+  border:1px solid var(--border2);color:var(--c1);
+  font-family:var(--font-display);letter-spacing:1px;
+  background:color-mix(in srgb, var(--c1) 6%, transparent);white-space:nowrap;
+}
+
+.content-area{flex:1;display:grid;grid-template-columns:1fr 300px;overflow:hidden;}
+
+/* ── SHOWCASE ── */
+.showcase{padding:24px;overflow-y:auto;display:flex;flex-direction:column;gap:20px;}
+.section-header{display:flex;align-items:center;gap:12px;margin-bottom:2px;}
+.section-header h3{font-family:var(--font-display);font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--muted);}
+.section-header::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* PLANET HERO */
+.planet-hero{
+  position:relative;border-radius:22px;overflow:hidden;
+  background:var(--bg2);border:1px solid var(--border);
+  padding:28px 32px;display:flex;align-items:center;gap:32px;min-height:210px;
+}
+.planet-hero::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 75% 50%,rgba(168,85,247,.1),transparent 55%),
+              radial-gradient(ellipse at 10% 80%,color-mix(in srgb, var(--c1) 6%, transparent),transparent 40%);
+  pointer-events:none;
+}
+.planet-hero::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--border2),transparent);
+}
+
+.planet-orb{
+  width:148px;height:148px;border-radius:50%;overflow:hidden;flex-shrink:0;
+  box-shadow:0 0 0 1px var(--border),0 0 50px color-mix(in srgb, var(--c1) 25%, transparent),0 0 100px color-mix(in srgb, var(--c1) 10%, transparent);
+  animation:orb-float 8s ease-in-out infinite;
+  position:relative;
+}
+.planet-orb::after{
+  content:'';position:absolute;inset:0;border-radius:50%;
+  background:linear-gradient(135deg,rgba(255,255,255,.15) 0%,transparent 50%);
+  pointer-events:none;
+}
+@keyframes orb-float{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-8px) rotate(180deg)}}
+.planet-orb img{width:100%;height:100%;object-fit:cover;display:block}
+
+.planet-meta{flex:1;min-width:0;}
+.planet-meta .category{font-size:11px;text-transform:uppercase;letter-spacing:3px;color:var(--c1);margin-bottom:8px;font-family:var(--font-display);}
+.planet-meta h2{font-family:var(--font-display);font-size:42px;font-weight:700;line-height:1;margin-bottom:10px;letter-spacing:1px;}
+.planet-meta p{color:var(--muted);font-size:13.5px;line-height:1.75;max-width:460px;}
+
+.fun-fact-pill{
+  display:inline-flex;align-items:center;gap:8px;margin-top:14px;
+  padding:6px 14px;border-radius:20px;
+  background:rgba(168,85,247,.08);border:1px solid var(--border3);
+  font-size:12px;color:rgba(168,85,247,.9);cursor:pointer;transition:.2s;
+  font-family:var(--font-display);
+}
+.fun-fact-pill:hover{background:rgba(168,85,247,.15);}
+
+/* STATS ROW */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;}
+.stat-card{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:14px;padding:14px 16px;transition:.25s;position:relative;overflow:hidden;
+}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--c1),var(--c2));opacity:0;transition:.25s;}
+.stat-card:hover{border-color:var(--border2);transform:translateY(-2px);}
+.stat-card:hover::before{opacity:1;}
+.stat-card .label{font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:6px;font-family:var(--font-display);}
+.stat-card .value{font-family:var(--font-display);font-size:19px;font-weight:700;color:var(--c1);}
+
+/* MISSIONS */
+.missions-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;}
+.mission-card{
+  background:var(--bg2);border:1px solid var(--border);border-radius:18px;
+  padding:18px 20px;position:relative;overflow:hidden;transition:.25s;cursor:default;
+}
+.mission-card:hover{border-color:var(--border2);transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,.4);}
+.mission-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;opacity:.8;}
+.mission-card.active-mission::before{background:linear-gradient(90deg,var(--c4),var(--c1));}
+.mission-card.completed-mission::before{background:linear-gradient(90deg,var(--muted),rgba(221,238,255,.1));}
+.mission-card.future-mission::before{background:linear-gradient(90deg,var(--c2),var(--c3));}
+
+.mc-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;}
+.mc-title{font-family:var(--font-display);font-size:16px;font-weight:700;letter-spacing:.5px;}
+.mc-status{
+  font-size:10px;font-family:var(--font-display);letter-spacing:1.5px;
+  padding:3px 10px;border-radius:20px;font-weight:600;white-space:nowrap;flex-shrink:0;
+}
+.mc-status.active{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);color:var(--c4);}
+.mc-status.completed{background:rgba(221,238,255,.06);border:1px solid rgba(221,238,255,.12);color:var(--muted);}
+.mc-status.future{background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.3);color:var(--c2);}
+.mc-agency{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;font-family:var(--font-display);}
+.mc-desc{font-size:13px;color:rgba(221,238,255,.7);line-height:1.7;margin-bottom:14px;}
+.mc-target{font-size:11px;color:var(--c1);cursor:pointer;text-decoration:none;font-family:var(--font-display);letter-spacing:.5px;}
+.mc-target:hover{text-decoration:underline;}
+.mc-facts{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+.mc-fact{font-size:10px;padding:3px 9px;border-radius:6px;background:color-mix(in srgb, var(--c1) 5%, transparent);border:1px solid var(--border);color:var(--muted);font-family:var(--font-display);}
+
+.mc-progress-wrap{margin-top:12px;}
+.mc-progress-label{display:flex;justify-content:space-between;margin-bottom:5px;}
+.mc-progress-label span{font-size:10px;color:var(--muted);font-family:var(--font-display);letter-spacing:1px;}
+.mc-progress-bar{height:3px;border-radius:2px;background:rgba(255,255,255,.06);overflow:hidden;}
+.mc-progress-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--c1),var(--c2));transition:width 1s ease;}
+
+/* FORUM */
+.forum-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:20px;overflow:hidden;}
+.forum-header{padding:16px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.forum-obj-name{font-family:var(--font-display);font-size:18px;font-weight:700;color:var(--c1);letter-spacing:.5px;}
+.forum-obj-category{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;font-family:var(--font-display);}
+.forum-live-dot{width:8px;height:8px;border-radius:50%;background:var(--c4);box-shadow:0 0 8px var(--c4);animation:pulse 2s ease-in-out infinite;flex-shrink:0;}
+.forum-live-label{font-size:11px;color:var(--c4);font-family:var(--font-display);letter-spacing:1px;}
+.forum-obj-img{width:48px;height:48px;border-radius:50%;overflow:hidden;border:2px solid var(--border2);flex-shrink:0;}
+.forum-obj-img img{width:100%;height:100%;object-fit:cover;}
+.forum-context{padding:12px 22px;background:color-mix(in srgb, var(--c1) 3%, transparent);border-bottom:1px solid var(--border);font-size:12px;color:rgba(221,238,255,.55);line-height:1.6;font-style:italic;}
+.forum-context strong{color:var(--c1);font-style:normal;font-family:var(--font-display);}
+.posts-list{max-height:280px;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:8px;}
+.post-item{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px 16px;font-size:13px;line-height:1.65;transition:.2s;position:relative;}
+.post-item:hover{border-color:var(--border2);}
+.post-item::before{content:'';position:absolute;left:0;top:12px;bottom:12px;width:2px;border-radius:1px;background:var(--c1);opacity:.4;}
+.post-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.pnick{color:var(--c1);font-size:11px;font-weight:700;letter-spacing:1px;font-family:var(--font-display);}
+.ptime{color:var(--muted);font-size:10px;font-family:var(--font-display);}
+.pobj-tag{display:inline-block;font-size:10px;color:var(--c2);background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.2);border-radius:6px;padding:1px 7px;font-family:var(--font-display);letter-spacing:.5px;margin-bottom:4px;}
+.post-text{color:rgba(221,238,255,.8);}
+.forum-compose{padding:14px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:10px;}
+.compose-row{display:flex;gap:8px;}
+.forum-compose input{flex:1;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font-main);font-size:13px;outline:none;transition:.2s;}
+.forum-compose input:focus{border-color:var(--border2);background:var(--bg4);}
+.compose-hint{font-size:11px;color:var(--muted);font-family:var(--font-display);display:flex;align-items:center;gap:6px;}
+.compose-hint .ch-obj{color:var(--c1);font-weight:700;}
+.btn-send{padding:10px 18px;background:color-mix(in srgb, var(--c1) 10%, transparent);border:1px solid var(--border2);border-radius:10px;color:var(--c1);cursor:pointer;font-size:12px;font-family:var(--font-display);transition:.2s;white-space:nowrap;font-weight:600;letter-spacing:.5px;}
+.btn-send:hover{background:color-mix(in srgb, var(--c1) 20%, transparent);box-shadow:0 0 20px color-mix(in srgb, var(--c1) 15%, transparent);}
+.empty-posts{text-align:center;color:var(--muted);font-size:13px;padding:30px 20px;font-family:var(--font-display);}
+.empty-posts .ep-icon{font-size:32px;display:block;margin-bottom:8px;}
+.empty-posts .ep-hint{font-size:11px;color:rgba(221,238,255,.3);margin-top:4px;font-style:italic;}
+
+/* 3D SECTION */
+.threed-container{width:100%;height:520px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;overflow:hidden;position:relative;}
+.threed-overlay{position:absolute;bottom:18px;left:20px;pointer-events:none;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;font-family:var(--font-display);}
+.threed-controls-hint{position:absolute;top:18px;right:18px;font-size:10px;color:color-mix(in srgb, var(--c1) 40%, transparent);font-family:var(--font-display);letter-spacing:1.5px;text-transform:uppercase;display:flex;gap:10px;align-items:center;}
+.btn-autopilot{background:rgba(2,4,8,.8);border:1px solid var(--border2);color:var(--c1);padding:4px 10px;border-radius:6px;cursor:pointer;font-family:var(--font-display);letter-spacing:1px;pointer-events:all;transition:0.2s;}
+.btn-autopilot.active{background:var(--c1);color:var(--bg);}
+
+/* NEW: COMPARE SECTION */
+.compare-controls{display:flex;align-items:center;gap:16px;background:var(--bg2);padding:16px;border-radius:16px;border:1px solid var(--border);margin-bottom:20px;}
+.compare-controls select{background:var(--bg3);color:var(--text);border:1px solid var(--border2);padding:8px 14px;border-radius:8px;font-family:var(--font-main);font-size:14px;outline:none;cursor:pointer;}
+.compare-controls select:focus{border-color:var(--c1);}
+.compare-visual{display:flex;align-items:flex-end;justify-content:center;gap:40px;height:240px;margin-bottom:30px;position:relative;}
+.comp-orb-wrap{display:flex;flex-direction:column;align-items:center;gap:10px;}
+.comp-orb{border-radius:50%;background:var(--bg3);box-shadow:0 0 0 1px var(--border2), 0 0 30px color-mix(in srgb, var(--c1) 20%, transparent);transition:0.5s ease-out;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.comp-orb img{width:100%;height:100%;object-fit:cover;opacity:1;display:block;}
+.comp-name{font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--text);letter-spacing:1px;}
+.comp-table{width:100%;border-collapse:collapse;background:var(--bg2);border-radius:16px;overflow:hidden;border:1px solid var(--border);}
+.comp-table th{background:color-mix(in srgb, var(--c1) 8%, transparent);color:var(--c1);font-family:var(--font-display);text-transform:uppercase;letter-spacing:2px;font-size:11px;padding:12px;text-align:left;}
+.comp-table td{padding:12px;border-bottom:1px solid var(--border);font-size:13px;color:var(--muted);}
+.comp-table tr:last-child td{border-bottom:none;}
+.comp-table td strong{color:var(--text);font-family:var(--font-display);font-size:15px;}
+
+/* NEW: GALLERY SECTION */
+.gallery-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;}
+.gal-item{position:relative;border-radius:12px;overflow:hidden;aspect-ratio:4/3;border:1px solid var(--border);cursor:pointer;background:var(--bg3);}
+.gal-item img{width:100%;height:100%;object-fit:cover;transition:0.4s ease;}
+.gal-item:hover img{transform:scale(1.1);}
+.gal-filter-name{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(0deg, rgba(0,0,0,0.9), transparent);padding:20px 12px 10px;font-family:var(--font-display);font-size:12px;color:var(--c1);letter-spacing:1px;text-transform:uppercase;font-weight:700;}
+
+/* OBJECTS PANEL */
+.objects-panel{border-left:1px solid var(--border);overflow-y:auto;background:rgba(2,4,8,.6);backdrop-filter:blur(12px);}
+.panel-title{padding:16px 16px 8px;font-size:10px;text-transform:uppercase;letter-spacing:3px;color:var(--muted);font-family:var(--font-display);}
+.cat-label{padding:12px 14px 4px;font-size:9px;text-transform:uppercase;letter-spacing:2px;color:color-mix(in srgb, var(--c1) 40%, transparent);font-weight:700;font-family:var(--font-display);}
+.obj-item{display:flex;align-items:center;gap:11px;padding:9px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:.2s;position:relative;}
+.obj-item:hover{background:color-mix(in srgb, var(--c1) 4%, transparent);}
+.obj-item.active{background:color-mix(in srgb, var(--c1) 8%, transparent);border-right:2px solid var(--c1);}
+.obj-thumb{width:38px;height:38px;border-radius:50%;overflow:hidden;border:1px solid var(--border);flex-shrink:0;transition:.2s;}
+.obj-item:hover .obj-thumb{border-color:var(--border2);}
+.obj-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.obj-info .name{font-size:12px;font-weight:600;margin-bottom:1px;font-family:var(--font-display);}
+.obj-info .type{font-size:10px;color:var(--muted);font-family:var(--font-display);letter-spacing:.5px;}
+
+/* TOAST NOTIFICATION */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:rgba(6,12,24,.97);border:1px solid var(--border2);border-radius:12px;padding:12px 22px;font-size:13px;color:var(--text);z-index:1000;transition:transform .4s cubic-bezier(.34,1.56,.64,1);font-family:var(--font-display);letter-spacing:.5px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 32px rgba(0,0,0,.6);}
+.toast.show{transform:translateX(-50%) translateY(0);}
+.toast-icon{font-size:16px;}
+
+/* MODALS (SURPRISE, SETTINGS, QUIZ) */
+.modal-overlay{position:fixed;inset:0;background:rgba(2,4,8,.96);z-index:200;display:flex;align-items:center;justify-content:center;flex-direction:column;opacity:0;pointer-events:none;transition:.4s;backdrop-filter:blur(5px);}
+.modal-overlay.active{opacity:1;pointer-events:all;}
+.modal-inner{background:var(--bg2);border:1px solid var(--border2);border-radius:24px;padding:40px;max-width:500px;width:90%;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.8);}
+.modal-close{position:absolute;top:20px;right:20px;background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:24px;transition:0.2s;}
+.modal-close:hover{color:var(--c5);}
+.modal-title{font-family:var(--font-display);font-size:28px;font-weight:700;letter-spacing:1px;margin-bottom:16px;color:var(--c1);}
+
+/* Quiz specific */
+.quiz-question{font-size:16px;line-height:1.6;margin-bottom:24px;}
+.quiz-options{display:flex;flex-direction:column;gap:10px;}
+.quiz-btn{padding:12px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:12px;color:var(--text);font-family:var(--font-main);font-size:14px;cursor:pointer;transition:0.2s;text-align:left;}
+.quiz-btn:hover{background:color-mix(in srgb, var(--c1) 10%, transparent);border-color:var(--c1);}
+.quiz-btn.correct{background:rgba(34,197,94,0.2);border-color:var(--c4);color:var(--c4);}
+.quiz-btn.wrong{background:rgba(244,63,94,0.2);border-color:var(--c5);color:var(--c5);}
+
+/* Settings specific */
+.set-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+.set-label{font-size:14px;color:var(--text);}
+.color-picker{width:40px;height:40px;border:none;border-radius:8px;cursor:pointer;background:none;padding:0;}
+.color-picker::-webkit-color-swatch-wrapper {padding: 0;}
+.color-picker::-webkit-color-swatch {border: 1px solid var(--border2); border-radius: 8px;}
+.danger-btn{padding:10px 16px;background:rgba(244,63,94,0.1);border:1px solid var(--c5);color:var(--c5);border-radius:8px;cursor:pointer;transition:0.2s;font-family:var(--font-display);letter-spacing:1px;font-weight:700;}
+.danger-btn:hover{background:var(--c5);color:#fff;}
+
+/* RANK BADGE DISPLAY */
+.rank-badge-wrap{display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:4px;cursor:pointer;}
+.rank-badge-img{width:52px;height:52px;filter:drop-shadow(0 0 10px var(--c1));transition:.3s;}
+.rank-badge-img:hover{filter:drop-shadow(0 0 20px var(--c1)) drop-shadow(0 0 6px var(--c2));transform:scale(1.1);}
+/* RANK-UP MODAL */
+#rankup-overlay .modal-inner{text-align:center;overflow:hidden;}
+.rankup-rays{position:absolute;inset:0;pointer-events:none;overflow:hidden;border-radius:24px;}
+.rankup-badge-big{width:120px;height:120px;margin:0 auto 10px;filter:drop-shadow(0 0 30px var(--c1)) drop-shadow(0 0 10px var(--c2));animation:rankup-pop .6s cubic-bezier(.34,1.56,.64,1);}
+@keyframes rankup-pop{0%{transform:scale(0) rotate(-20deg);opacity:0}100%{transform:scale(1) rotate(0deg);opacity:1}}
+.rankup-title{font-family:var(--font-display);font-size:14px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;}
+.rankup-rank{font-family:var(--font-display);font-size:36px;font-weight:700;letter-spacing:2px;background:linear-gradient(90deg,var(--c1),var(--c2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px;}
+.rankup-desc{font-size:13px;color:var(--muted);line-height:1.7;max-width:340px;margin:0 auto;}
+/* GAME POWERUP ICONS */
+.game-powerup-bar{display:flex;gap:8px;align-items:center;}
+.game-powerup-slot{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:rgba(2,4,8,.7);display:flex;align-items:center;justify-content:center;font-size:18px;position:relative;transition:.2s;}
+.game-powerup-slot.active{border-color:var(--c1);background:color-mix(in srgb,var(--c1) 15%,transparent);box-shadow:0 0 12px color-mix(in srgb,var(--c1) 30%,transparent);}
+.game-powerup-slot .pu-timer{position:absolute;bottom:-2px;right:-2px;font-size:8px;background:var(--c3);color:#fff;border-radius:3px;padding:0 3px;font-family:var(--font-display);}
+@keyframes rankup-shine{0%,100%{opacity:0}50%{opacity:1}}
+
+@keyframes pulse{0%,100%{opacity:1;box-shadow:inherit}50%{opacity:.4;box-shadow:none}}
+
+/* SEARCH BAR */
+.panel-search-wrap{padding:8px 10px 4px;}
+.panel-search{width:100%;padding:7px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font-main);font-size:12px;outline:none;transition:.2s;}
+.panel-search:focus{border-color:var(--border2);background:var(--bg4);}
+.panel-search::placeholder{color:var(--muted);opacity:.6;}
+
+/* FAVORITES */
+.obj-item .fav-star{margin-left:auto;font-size:13px;opacity:0;transition:.15s;flex-shrink:0;cursor:pointer;padding:2px 4px;border-radius:4px;}
+.obj-item:hover .fav-star{opacity:.5;}
+.obj-item .fav-star.starred{opacity:1;color:#f59e0b;}
+.fav-item{display:flex;align-items:center;gap:8px;padding:6px 14px;cursor:pointer;font-size:11px;color:var(--muted);font-family:var(--font-display);border-bottom:1px solid var(--border);transition:.2s;position:relative;}
+.fav-item:hover{color:var(--c1);background:color-mix(in srgb,var(--c1) 4%,transparent);}
+.fav-item .fav-thumb{width:24px;height:24px;border-radius:50%;overflow:hidden;flex-shrink:0;border:1px solid var(--border);}
+.fav-item .fav-thumb img{width:100%;height:100%;object-fit:cover;}
+.fav-section-label{padding:10px 14px 3px;font-size:9px;text-transform:uppercase;letter-spacing:2px;color:#f59e0b;font-family:var(--font-display);}
+
+/* TOPBAR TICKER */
+.ticker-wrap{flex:1;overflow:hidden;position:relative;height:20px;min-width:0;}
+.ticker-inner{display:flex;gap:60px;white-space:nowrap;animation:ticker-scroll 28s linear infinite;}
+.ticker-inner:hover{animation-play-state:paused;}
+.ticker-item{font-size:11px;color:var(--muted);font-family:var(--font-display);letter-spacing:.5px;cursor:default;}
+.ticker-item span{color:var(--c1);margin-right:6px;}
+@keyframes ticker-scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+
+/* OBJECT TRANSITION */
+.planet-orb{transition:opacity .25s ease, transform .25s ease;}
+.planet-orb.fade-out{opacity:0;transform:scale(.93);}
+
+/* KEYBOARD HINT */
+.kbd-hint{font-size:10px;color:color-mix(in srgb,var(--c1) 35%,transparent);font-family:var(--font-display);letter-spacing:1px;border:1px solid var(--border);border-radius:5px;padding:2px 7px;white-space:nowrap;}
+
+/* NO RESULTS */
+.no-results{padding:20px 14px;font-size:11px;color:var(--muted);font-family:var(--font-display);text-align:center;}
+
+/* RESPONSIVE */
+@media(max-width:1100px){.layout{grid-template-columns:82px 1fr}.content-area{grid-template-columns:1fr}.objects-panel{display:none}}
+@media(max-width:800px){.layout{grid-template-columns:1fr;grid-template-rows:auto}.nav{display:none}.planet-hero{flex-direction:column;align-items:flex-start}.planet-orb{width:100px;height:100px}}
+</style>
+</head>
+<body>
+
+<div class="starfield"><canvas id="starCanvas"></canvas></div>
+
+<div class="toast" id="toast">
+  <span class="toast-icon" id="toast-icon">🚀</span>
+  <span id="toast-msg">Вітаємо!</span>
+</div>
+
+<div class="modal-overlay" id="surprise-overlay">
+  <div class="modal-inner" style="text-align:center;">
+    <button class="modal-close" onclick="closeModal('surprise-overlay')">×</button>
+    <div class="modal-title" style="font-size:48px;" id="surprise-title">🌌</div>
+    <p class="quiz-question" style="color:var(--muted)" id="surprise-fact"></p>
+  </div>
+</div>
+
+<div class="modal-overlay" id="quiz-overlay">
+  <div class="modal-inner">
+    <button class="modal-close" onclick="closeModal('quiz-overlay')">×</button>
+    <div class="modal-title">Космічна Академія</div>
+    <div id="quiz-content">
+      <div class="quiz-question" id="quiz-q">Завантаження запитання...</div>
+      <div class="quiz-options" id="quiz-opts"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="settings-overlay">
+  <div class="modal-inner">
+    <button class="modal-close" onclick="closeModal('settings-overlay')">×</button>
+    <div class="modal-title">Налаштування Системи</div>
+    <div class="set-row">
+      <span class="set-label">Акцентний Колір</span>
+      <input type="color" id="theme-color" class="color-picker" value="#00d2ff" onchange="changeThemeColor(this.value)">
+    </div>
+    <div class="set-row">
+      <span class="set-label">Швидкість Зірок</span>
+      <input type="range" id="star-speed" min="0" max="2" step="0.1" value="1" onchange="updateStarSpeed(this.value)">
+    </div>
+    <hr style="border:none;border-top:1px solid var(--border);margin:20px 0;">
+    <div class="set-row">
+      <span class="set-label" style="color:var(--muted);font-size:12px;">Скинути прогрес та очистити форум</span>
+      <button class="danger-btn" onclick="resetAllData()">Очистити Дані</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── RANK UP MODAL ── -->
+<div class="modal-overlay" id="rankup-overlay">
+  <div class="modal-inner" style="position:relative;max-width:400px;">
+    <div class="rankup-rays" id="rankup-rays"></div>
+    <button class="modal-close" onclick="closeModal('rankup-overlay')">×</button>
+    <div class="rankup-title">⬆ НОВИЙ РАНГ!</div>
+    <img id="rankup-badge-img" class="rankup-badge-big" src="" alt="rank badge" style="display:block;">
+    <div class="rankup-rank" id="rankup-rank-name">Навігатор</div>
+    <div class="rankup-desc" id="rankup-rank-desc"></div>
+    <canvas id="rankup-confetti" style="position:absolute;inset:0;pointer-events:none;border-radius:24px;width:100%;height:100%;"></canvas>
+  </div>
+</div>
+
+<!-- ── METEOR GAME MODAL ── -->
+<div class="modal-overlay" id="game-overlay" style="align-items:stretch;justify-content:stretch;padding:0;">
+  <div style="width:100%;height:100%;display:flex;flex-direction:column;background:var(--bg);position:relative;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px;border-bottom:1px solid var(--border);background:rgba(2,4,8,.97);flex-shrink:0;z-index:10;gap:10px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <span style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--c1);letter-spacing:2px;">☄️ МЕТЕОРИТНА АТАКА</span>
+        <span style="font-family:var(--font-display);font-size:13px;color:var(--text);letter-spacing:1px;">РАХУНОК: <strong id="game-score-val" style="color:var(--c1);">0</strong></span>
+        <span style="font-family:var(--font-display);font-size:11px;color:var(--muted);">РЕКОРД: <strong id="game-hiscore-val" style="color:var(--c2);">0</strong></span>
+        <span id="game-combo-display" style="font-family:var(--font-display);font-size:13px;color:var(--c3);letter-spacing:1px;display:none;">КОМБО: <strong id="game-combo-val" style="color:var(--c3);">x1</strong></span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="game-powerup-bar" id="game-powerup-bar">
+          <div class="game-powerup-slot" id="pu-shield" title="Щит (S)">🛡️<span class="pu-timer" id="pu-shield-t" style="display:none"></span></div>
+          <div class="game-powerup-slot" id="pu-rapid" title="Швидкий вогонь (F)">⚡<span class="pu-timer" id="pu-rapid-t" style="display:none"></span></div>
+          <div class="game-powerup-slot" id="pu-bomb" title="Бомба (B)">💣<span class="pu-timer" id="pu-bomb-t" style="display:none"></span></div>
+        </div>
+        <div id="game-lives-display" style="display:flex;gap:4px;align-items:center;font-size:18px;"></div>
+        <div style="font-family:var(--font-display);font-size:11px;color:var(--c3);letter-spacing:2px;">ХВИЛЯ: <strong id="game-wave-val">1</strong></div>
+        <button class="modal-close" style="position:static;margin:0;" onclick="closeGameModal()">×</button>
+      </div>
+    </div>
+    <canvas id="gameCanvas" style="flex:1;display:block;width:100%;cursor:none;touch-action:none;"></canvas>
+    <!-- Start screen -->
+    <div id="game-start-screen" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(2,4,8,.92);z-index:5;gap:14px;">
+      <div style="font-size:52px;">☄️</div>
+      <div style="font-family:var(--font-display);font-size:30px;font-weight:700;color:var(--text);letter-spacing:3px;">МЕТЕОРИТНА АТАКА</div>
+      <div style="font-family:var(--font-display);font-size:12px;color:var(--muted);text-align:center;max-width:400px;line-height:2;letter-spacing:.5px;">
+        <span style="color:var(--c1);">WASD</span> або <span style="color:var(--c1);">стрілки</span> — рух · <span style="color:var(--c1);">Миша</span> — прицілювання · <span style="color:var(--c1);">ЛКМ / Пробіл</span> — стріляти<br>
+        Збирай <span style="color:#ffd700;">★</span> бонуси · <span style="color:var(--c3);">Червоні</span> метеори стріляють у відповідь · <span style="color:var(--c2);">Фіолетові</span> — броньовані
+      </div>
+      <button onclick="startGame()" style="padding:13px 38px;background:color-mix(in srgb,var(--c1) 15%,transparent);border:1px solid var(--c1);border-radius:12px;color:var(--c1);font-family:var(--font-display);font-size:15px;font-weight:700;letter-spacing:3px;cursor:pointer;margin-top:4px;">ПОЧАТИ ГРУ</button>
+    </div>
+    <!-- Game over screen -->
+    <div id="game-over-screen" style="position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(2,4,8,.93);z-index:5;gap:12px;">
+      <div style="font-family:var(--font-display);font-size:38px;font-weight:700;color:var(--c5);letter-spacing:3px;text-shadow:0 0 30px var(--c5);">ГРА ЗАКІНЧЕНА</div>
+      <div style="font-family:var(--font-display);font-size:18px;color:var(--text);">Рахунок: <strong id="game-over-score" style="color:var(--c1);">0</strong></div>
+      <div style="font-family:var(--font-display);font-size:13px;color:var(--c2);">Рекорд: <strong id="game-over-hiscore">0</strong></div>
+      <div id="game-over-stats" style="font-family:var(--font-display);font-size:11px;color:var(--muted);text-align:center;line-height:1.8;"></div>
+      <div id="game-over-xp" style="font-family:var(--font-display);font-size:13px;color:var(--c4);"></div>
+      <button onclick="startGame()" style="padding:11px 34px;background:color-mix(in srgb,var(--c1) 15%,transparent);border:1px solid var(--c1);border-radius:12px;color:var(--c1);font-family:var(--font-display);font-size:14px;font-weight:700;letter-spacing:3px;cursor:pointer;margin-top:6px;">ГРАТИ ЗНОВУ</button>
+    </div>
+    <!-- Wave banner -->
+    <div id="game-wave-screen" style="position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;z-index:4;">
+      <div id="game-wave-text" style="font-family:var(--font-display);font-size:48px;font-weight:700;color:var(--c1);letter-spacing:6px;text-shadow:0 0 60px var(--c1);opacity:0;transition:opacity .3s;"></div>
+      <div id="game-wave-sub" style="font-family:var(--font-display);font-size:14px;color:var(--muted);letter-spacing:3px;margin-top:8px;opacity:0;transition:opacity .3s;"></div>
+    </div>
+  </div>
+</div>
+
+<div class="layout">
+
+<nav class="nav">
+  <div class="nav-logo-wrap">
+    <div class="logo">Cosmo</div>
+    <div class="nav-version">v4.5</div>
+  </div>
+  <div class="nav-clock">
+    <div class="utc-label">UTC</div>
+    <div class="utc-time" id="nav-time">--:--</div>
+    <div class="utc-date" id="nav-date">---</div>
+  </div>
+  <div class="nav-divider"></div>
+  
+  <button class="nav-btn active" onclick="setView('planets',this)" title="Всі об'єкти">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2z"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+  </button>
+  <button class="nav-btn" onclick="toggleRandom()" title="Випадковий">
+    <svg viewBox="0 0 24 24"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+  </button>
+  <button class="nav-btn" onclick="showSurprise()" title="Факт Дня">
+    <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+  </button>
+  <button class="nav-btn" onclick="startQuiz()" title="Академія (Квіз)">
+    <svg viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+  </button>
+  <button class="nav-btn" id="btn-audio" onclick="toggleAudio()" title="Космічне Радіо">
+    <svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+  </button>
+  <button class="nav-btn" onclick="openGameModal()" title="Стріляй по метеорам!">
+    <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    <span class="tip">🎮 Метеоритна Атака</span>
+  </button>
+  <button class="nav-btn" onclick="openModal('settings-overlay')" title="Налаштування">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+  </button>
+
+  <div class="nav-bottom">
+    <div class="nav-divider"></div>
+    <div class="nav-xp-wrap" onclick="showRankDetails()" title="Натисни для деталей рангу">
+      <div id="rank-badge-container" style="display:flex;justify-content:center;margin-bottom:3px;">
+        <canvas id="rank-badge-canvas" width="48" height="48" style="cursor:pointer;filter:drop-shadow(0 0 8px var(--c1));transition:.3s;" title="Твій ранг"></canvas>
+      </div>
+      <div class="xp-level" id="xp-level">Lvl 1</div>
+      <div class="xp-bar"><div class="xp-fill" id="xp-fill"></div></div>
+      <div class="xp-rank" id="xp-rank">Новачок</div>
+    </div>
+  </div>
+</nav>
+
+<main class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <h1 id="top-title">Земля</h1>
+      <div class="topbar-category" id="top-category">Скеляста планета</div>
+    </div>
+    <div class="ticker-wrap" id="ticker-wrap">
+      <div class="ticker-inner" id="ticker-inner"></div>
+    </div>
+    <div class="view-tabs">
+      <button class="tab active" onclick="setContentTab('info',event)">🪐 Огляд</button>
+      <button class="tab" onclick="setContentTab('gallery',event)">🖼 Галерея</button>
+      <button class="tab" onclick="setContentTab('compare',event)">⚖️ Порівняти</button>
+      <button class="tab" onclick="setContentTab('missions',event)">🚀 Місії</button>
+      <button class="tab" onclick="setContentTab('forum',event)">💬 Форум</button>
+      <button class="tab" onclick="setContentTab('threed',event)">🌀 3D Схема</button>
+    </div>
+    <div class="kbd-hint" title="Натисніть R для випадкового об'єкта">R = випадковий</div>
+    <div class="badge" id="top-badge">Наш дім</div>
+  </div>
+
+  <div class="content-area">
+    <div class="showcase" id="showcase">
+
+      <div id="info-section">
+        <div class="planet-hero">
+          <div class="planet-orb"><img id="planet-img" src="https://upload.wikimedia.org/wikipedia/commons/9/97/The_Earth_seen_from_Apollo_17.jpg" alt="Земля"></div>
+          <div class="planet-meta">
+            <div class="category" id="planet-category">Скеляста планета</div>
+            <h2 id="planet-title">Земля</h2>
+            <p id="planet-desc">Земля — третя планета від Сонця та єдиний відомий нам світ, де існує життя.</p>
+            <div class="fun-fact-pill" onclick="showSurpriseForCurrent()">
+              <span class="pill-icon">✨</span>
+              <span>Цікавий факт</span>
+            </div>
+          </div>
+        </div>
+        <div class="section-header" style="margin-top:20px;"><h3>Ключові Дані</h3></div>
+        <div class="stats-row" id="stats-row"></div>
+      </div>
+
+      <div id="gallery-section" style="display:none">
+        <div class="section-header"><h3>Спектральний Аналіз</h3></div>
+        <p style="font-size:13px; color:var(--muted); margin-bottom:16px;">Симуляція вигляду об'єкта у різних діапазонах електромагнітного спектра.</p>
+        <div class="gallery-grid" id="gallery-grid"></div>
+      </div>
+
+      <div id="compare-section" style="display:none">
+        <div class="compare-controls">
+          <span style="font-family:var(--font-display); font-size:16px; font-weight:700;">Порівняти з:</span>
+          <select id="compare-select" onchange="renderCompare()">
+            </select>
+        </div>
+        
+        <div class="compare-visual" id="compare-visual">
+          </div>
+
+        <table class="comp-table">
+          <thead>
+            <tr>
+              <th id="comp-th-1">Об'єкт 1</th>
+              <th>Параметр</th>
+              <th id="comp-th-2" style="text-align:right;">Об'єкт 2</th>
+            </tr>
+          </thead>
+          <tbody id="compare-tbody">
+            </tbody>
+        </table>
+      </div>
+
+      <div id="missions-section" style="display:none">
+        <div class="section-header"><h3>Космічні місії</h3></div>
+        <div class="missions-grid" id="missions-grid"></div>
+      </div>
+
+      <div id="forum-section" style="display:none">
+        <div class="forum-wrap">
+          <div class="forum-header">
+            <div class="forum-obj-img"><img id="forum-obj-img" src="" alt=""></div>
+            <div style="flex:1;min-width:0;">
+              <div class="forum-obj-name" id="forum-obj-name">Земля</div>
+              <div class="forum-obj-category" id="forum-obj-category">Скеляста планета</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div class="forum-live-dot"></div>
+              <div class="forum-live-label">LIVE</div>
+            </div>
+          </div>
+          <div class="forum-context" id="forum-context"></div>
+          <div class="posts-list" id="posts-list"></div>
+          <div class="forum-compose">
+            <div class="compose-hint">
+              Ви обговорюєте: <span class="ch-obj" id="compose-obj-name">Земля</span>
+            </div>
+            <div class="compose-row">
+              <input id="nick" placeholder="Нікнейм" maxlength="20" style="max-width:130px;flex:none">
+              <input id="msg-input" placeholder="Напишіть щось про цей об'єкт...">
+              <button class="btn-send" onclick="postMsg()">↑ Надіслати</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="threed-section" style="display:none">
+        <div class="threed-container" id="threed-canvas-container">
+          <div class="threed-overlay">Сонячна система · Drag для обертання</div>
+          <div class="threed-controls-hint">
+            <button class="btn-autopilot" id="btn-autopilot" onclick="toggleAutoPilot()">Автопілот: ВИМК</button>
+            <span>🖱 Перетягніть для обертання</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="objects-panel">
+      <div class="panel-title">Каталог об'єктів</div>
+      <div class="panel-search-wrap">
+        <input class="panel-search" id="obj-search" placeholder="🔍 Пошук об'єкта..." oninput="filterObjList(this.value)">
+      </div>
+      <div id="fav-section"></div>
+      <div id="obj-list"></div>
+    </div>
+  </div>
+</main>
+</div>
+
+<script>
+// ── GAMIFICATION (XP SYSTEM) ──
+let userXP = parseInt(localStorage.getItem('cosmo_xp')) || 0;
+let _lastRankName = null;
+
+const RANKS = [
+  { max: 50,    name: "Новачок",         desc: "Ти тільки починаєш свою космічну подорож. Досліджуй об'єкти, щоб підвищитися!",  icon: "rookie",   color: "#8899aa" },
+  { max: 150,   name: "Спостерігач",     desc: "Ти почав помічати деталі Всесвіту. Непогано для початку!",                       icon: "observer",  color: "#22c55e" },
+  { max: 300,   name: "Дослідник",       desc: "Ти активно вивчаєш Сонячну систему. Галактика чекає!",                           icon: "explorer",  color: "#00d2ff" },
+  { max: 600,   name: "Навігатор",       desc: "Ти орієнтуєшся в зірках краще за більшість. Курс прокладено!",                   icon: "navigator", color: "#a855f7" },
+  { max: 1000,  name: "Капітан",         desc: "Капітан зоряного флоту! Твій екіпаж вірить тобі.",                               icon: "captain",   color: "#f97316" },
+  { max: 2000,  name: "Адмірал",         desc: "Адмірал космосу! Цілі флоти підкоряються твоїй волі.",                          icon: "admiral",   color: "#f43f5e" },
+  { max: 99999, name: "Легенда Всесвіту",desc: "Ти досяг вершини. Всесвіт схиляється перед тобою.",                              icon: "legend",    color: "#ffd700" }
+];
+
+// ── SVG RANK BADGE RENDERER ──
+function drawRankBadge(canvas, rankObj, size=48){
+  if(!canvas) return;
+  const c = canvas.getContext('2d');
+  const s = size;
+  canvas.width = s; canvas.height = s;
+  const cx = s/2, cy = s/2, r = s*0.44;
+  const col = rankObj.color;
+
+  // Outer ring
+  const ring = c.createRadialGradient(cx,cy,r*0.7,cx,cy,r);
+  ring.addColorStop(0, col+'44'); ring.addColorStop(1, col+'00');
+  c.beginPath(); c.arc(cx,cy,r+4,0,Math.PI*2);
+  c.fillStyle = ring; c.fill();
+
+  // Shield / star shape based on icon
+  const ico = rankObj.icon;
+  c.save(); c.translate(cx,cy);
+
+  if(ico==='rookie'){
+    // Simple circle
+    const g=c.createRadialGradient(0,0,2,0,0,r);
+    g.addColorStop(0,'#cdd'); g.addColorStop(1,col);
+    c.beginPath(); c.arc(0,0,r,0,Math.PI*2); c.fillStyle=g; c.fill();
+    c.strokeStyle='#fff3'; c.lineWidth=1.5; c.stroke();
+    c.fillStyle='#fff'; c.font=`bold ${s*0.35}px sans-serif`; c.textAlign='center'; c.textBaseline='middle';
+    c.fillText('N',0,1);
+  } else if(ico==='observer'){
+    // Pentagon
+    drawPoly(c,0,0,r,5,-Math.PI/2,col);
+    c.fillStyle='#fff'; c.font=`bold ${s*0.3}px sans-serif`; c.textAlign='center'; c.textBaseline='middle';
+    c.fillText('👁',0,2);
+  } else if(ico==='explorer'){
+    // Hexagon
+    drawPoly(c,0,0,r,6,0,col);
+    c.fillStyle='#fff'; c.font=`${s*0.32}px sans-serif`; c.textAlign='center'; c.textBaseline='middle';
+    c.fillText('🔭',0,2);
+  } else if(ico==='navigator'){
+    // Star 6-point
+    drawStar(c,0,0,r,r*0.5,6,col);
+    c.fillStyle='#fff'; c.font=`${s*0.32}px sans-serif`; c.textAlign='center'; c.textBaseline='middle';
+    c.fillText('🧭',0,2);
+  } else if(ico==='captain'){
+    // Star 8-point
+    drawStar(c,0,0,r,r*0.55,8,col);
+    c.fillStyle='#fff'; c.font=`${s*0.3}px sans-serif`; c.textAlign='center'; c.textBaseline='middle';
+    c.fillText('⚓',0,2);
+  } else if(ico==='admiral'){
+    // Star 10-point with glow
+    c.shadowColor=col; c.shadowBlur=12;
+    drawStar(c,0,0,r,r*0.45,10,col);
+    c.shadowBlur=0;
+    c.fillStyle='#fff'; c.font=`${s*0.3}px sans-serif`; c.textAlign='center'; c.textBaseline='middle';
+    c.fillText('🎖️',0,2);
+  } else if(ico==='legend'){
+    // Crown shape
+    c.shadowColor='#ffd700'; c.shadowBlur=20;
+    drawCrown(c,0,0,r,col);
+    c.shadowBlur=0;
+    c.fillStyle='#fff'; c.font=`${s*0.28}px sans-serif`; c.textAlign='center'; c.textBaseline='middle';
+    c.fillText('👑',0,4);
+  }
+  c.restore();
+}
+
+function drawPoly(c,x,y,r,sides,startAngle,col){
+  const g=c.createLinearGradient(x-r,y-r,x+r,y+r);
+  g.addColorStop(0,col+'ee'); g.addColorStop(1,col+'88');
+  c.beginPath();
+  for(let i=0;i<sides;i++){
+    const a=startAngle+i*(Math.PI*2/sides);
+    i===0?c.moveTo(x+Math.cos(a)*r,y+Math.sin(a)*r):c.lineTo(x+Math.cos(a)*r,y+Math.sin(a)*r);
+  }
+  c.closePath(); c.fillStyle=g; c.fill();
+  c.strokeStyle='#fff3'; c.lineWidth=1.2; c.stroke();
+}
+
+function drawStar(c,x,y,outerR,innerR,points,col){
+  const g=c.createRadialGradient(x,y,innerR*0.3,x,y,outerR);
+  g.addColorStop(0,col+'ff'); g.addColorStop(1,col+'99');
+  c.beginPath();
+  for(let i=0;i<points*2;i++){
+    const a=(i*Math.PI/points)-Math.PI/2;
+    const r2=i%2===0?outerR:innerR;
+    i===0?c.moveTo(x+Math.cos(a)*r2,y+Math.sin(a)*r2):c.lineTo(x+Math.cos(a)*r2,y+Math.sin(a)*r2);
+  }
+  c.closePath(); c.fillStyle=g; c.fill();
+  c.strokeStyle='#fff4'; c.lineWidth=1; c.stroke();
+}
+
+function drawCrown(c,x,y,r,col){
+  const g=c.createLinearGradient(x,y-r,x,y+r*0.5);
+  g.addColorStop(0,'#ffd700'); g.addColorStop(1,col);
+  c.fillStyle=g;
+  // Crown base
+  c.beginPath();
+  c.moveTo(x-r,y+r*0.3); c.lineTo(x-r,y-r*0.2);
+  c.lineTo(x-r*0.6,y-r*0.6); c.lineTo(x-r*0.2,y-r*0.1);
+  c.lineTo(x,y-r); c.lineTo(x+r*0.2,y-r*0.1);
+  c.lineTo(x+r*0.6,y-r*0.6); c.lineTo(x+r,y-r*0.2);
+  c.lineTo(x+r,y+r*0.3); c.closePath();
+  c.fill(); c.strokeStyle='#fff5'; c.lineWidth=1.2; c.stroke();
+}
+
+function addXP(amount, reason = "") {
+  const prevRank = RANKS.find(r => userXP < r.max) || RANKS[RANKS.length-1];
+  userXP += amount;
+  localStorage.setItem('cosmo_xp', userXP);
+  const newRank = RANKS.find(r => userXP < r.max) || RANKS[RANKS.length-1];
+  updateXPUI();
+  if (reason) showToast(`+${amount} XP: ${reason}`, `⭐`);
+  // Rank-up popup
+  if(newRank.name !== prevRank.name){
+    setTimeout(()=>showRankUp(newRank), 600);
+  }
+}
+
+function showRankUp(rankObj){
+  document.getElementById('rankup-rank-name').textContent = rankObj.name;
+  document.getElementById('rankup-rank-name').style.color = '';
+  document.getElementById('rankup-rank-name').style.background = `linear-gradient(90deg,${rankObj.color},var(--c2))`;
+  document.getElementById('rankup-rank-name').style.webkitBackgroundClip = 'text';
+  document.getElementById('rankup-rank-name').style.webkitTextFillColor = 'transparent';
+  document.getElementById('rankup-rank-desc').textContent = rankObj.desc;
+  // Draw big badge
+  const bigCanvas = document.getElementById('rankup-badge-img');
+  bigCanvas.style.display = 'block';
+  // Reuse canvas trick — swap to actual canvas
+  document.getElementById('rankup-badge-img').outerHTML = '<canvas id="rankup-badge-img" class="rankup-badge-big" style="display:block;margin:0 auto 10px;"></canvas>';
+  setTimeout(()=>{
+    const bc = document.getElementById('rankup-badge-img');
+    drawRankBadge(bc, rankObj, 120);
+    bc.style.filter = `drop-shadow(0 0 30px ${rankObj.color}) drop-shadow(0 0 10px ${rankObj.color})`;
+    bc.style.animation = 'rankup-pop .6s cubic-bezier(.34,1.56,.64,1)';
+  },50);
+  openModal('rankup-overlay');
+  launchConfetti(rankObj.color);
+  showToast(`🎉 Новий ранг: ${rankObj.name}!`, '🏆');
+}
+
+function launchConfetti(col){
+  const canvas = document.getElementById('rankup-confetti');
+  if(!canvas) return;
+  const c = canvas.getContext('2d');
+  const W = canvas.offsetWidth || 400, H = canvas.offsetHeight || 300;
+  canvas.width=W; canvas.height=H;
+  let pieces = [];
+  const colors=[col,'#fff','#ffd700','#a855f7','#00d2ff'];
+  for(let i=0;i<80;i++) pieces.push({
+    x:Math.random()*W, y:-10-Math.random()*30,
+    vx:(Math.random()-.5)*4, vy:2+Math.random()*4,
+    r:3+Math.random()*5, col:colors[Math.floor(Math.random()*colors.length)],
+    rot:Math.random()*Math.PI, rotV:(Math.random()-.5)*0.2, life:1
+  });
+  let frame=0;
+  function draw(){
+    c.clearRect(0,0,W,H);
+    pieces.forEach(p=>{
+      p.x+=p.vx; p.y+=p.vy; p.vy+=0.12; p.rot+=p.rotV; p.life-=0.008;
+      c.save(); c.translate(p.x,p.y); c.rotate(p.rot);
+      c.globalAlpha=Math.max(0,p.life);
+      c.fillStyle=p.col;
+      c.fillRect(-p.r/2,-p.r/2,p.r,p.r);
+      c.restore();
+    });
+    pieces=pieces.filter(p=>p.life>0&&p.y<H+20);
+    if(pieces.length>0&&frame<200){ frame++; requestAnimationFrame(draw); }
+    else c.clearRect(0,0,W,H);
+  }
+  draw();
+}
+
+function showRankDetails(){
+  const rank = RANKS.find(r=>userXP<r.max)||RANKS[RANKS.length-1];
+  showRankUp(rank);
+}
+
+function updateXPUI() {
+  let level = Math.floor(Math.sqrt(userXP / 10)) + 1;
+  let currentRank = RANKS.find(r => userXP < r.max) || RANKS[RANKS.length - 1];
+  let currentLevelXP = 10 * Math.pow(level - 1, 2);
+  let nextLevelXP = 10 * Math.pow(level, 2);
+  let progress = ((userXP - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100;
+  document.getElementById('xp-level').textContent = `Lvl ${level}`;
+  document.getElementById('xp-rank').textContent = currentRank.name;
+  document.getElementById('xp-fill').style.width = `${Math.min(100, Math.max(0, progress))}%`;
+  // Draw rank badge
+  const bc = document.getElementById('rank-badge-canvas');
+  if(bc){ drawRankBadge(bc, currentRank, 48); bc.style.filter=`drop-shadow(0 0 8px ${currentRank.color})`; }
+}
+
+
+// ── GENERATIVE AUDIO ENGINE ──
+let audioCtx = null;
+let osc1, osc2, lfo, gainNode;
+let isAudioPlaying = false;
+
+function toggleAudio() {
+  const btn = document.getElementById('btn-audio');
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    osc1 = audioCtx.createOscillator();
+    osc2 = audioCtx.createOscillator();
+    lfo = audioCtx.createOscillator();
+    gainNode = audioCtx.createGain();
+    
+    // Deep drone setup
+    osc1.type = 'sine';
+    osc1.frequency.value = 55; // A1
+    
+    osc2.type = 'triangle';
+    osc2.frequency.value = 110; // A2
+    
+    // LFO for slow pulsing volume
+    lfo.type = 'sine';
+    lfo.frequency.value = 0.05; // 20 second cycle
+    
+    let lfoGain = audioCtx.createGain();
+    lfoGain.gain.value = 0.5;
+    
+    lfo.connect(lfoGain);
+    lfoGain.connect(gainNode.gain);
+    
+    gainNode.gain.value = 0.15; // Base volume very low
+    
+    osc1.connect(gainNode);
+    osc2.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    
+    osc1.start();
+    osc2.start();
+    lfo.start();
+  }
+
+  if (isAudioPlaying) {
+    audioCtx.suspend();
+    btn.classList.remove('active');
+    showToast("Космічне Радіо вимкнено", "🔇");
+  } else {
+    audioCtx.resume();
+    btn.classList.add('active');
+    showToast("Відтворення: Сигнал Глибокого Космосу", "📡");
+  }
+  isAudioPlaying = !isAudioPlaying;
+}
+
+
+// ── STARFIELD ANIMATION ──
+let globalStarSpeed = 1;
+(function(){
+  const canvas = document.getElementById('starCanvas');
+  const ctx = canvas.getContext('2d');
+  let stars = [];
+  function resize(){canvas.width=window.innerWidth;canvas.height=window.innerHeight;}
+  function makeStars(){
+    stars=[];
+    const count = Math.floor((canvas.width*canvas.height)/4000);
+    for(let i=0;i<count;i++){
+      stars.push({
+        x:Math.random()*canvas.width,y:Math.random()*canvas.height,
+        r:Math.random()*1.2+.2,
+        a:Math.random(),da:(Math.random()-.5)*.008,
+        baseSpeed:Math.random()*.15+.05
+      });
+    }
+  }
+  function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    stars.forEach(s=>{
+      s.a+=s.da;
+      if(s.a<=0||s.a>=1)s.da*=-1;
+      s.y -= (s.baseSpeed * globalStarSpeed);
+      if(s.y<0){s.y=canvas.height;s.x=Math.random()*canvas.width;}
+      ctx.beginPath();
+      ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(200,230,255,${s.a})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  resize();makeStars();draw();
+  window.addEventListener('resize',()=>{resize();makeStars();});
+})();
+
+function updateStarSpeed(val) {
+  globalStarSpeed = parseFloat(val);
+}
+
+function changeThemeColor(hex) {
+  document.documentElement.style.setProperty('--c1', hex);
+  localStorage.setItem('cosmo_theme', hex);
+}
+
+
+// ── DATA ──
+const OBJECTS = {
+  "Сонце":{ img:"https://upload.wikimedia.org/wikipedia/commons/b/b4/The_Sun_by_the_Atmospheric_Imaging_Assembly_of_NASA%27s_Solar_Dynamics_Observatory_-_20100819.jpg", category:"Зірка · G-тип", desc:"Сонце — єдина зірка нашої системи, жовтий карлик класу G2V. Утримує 99.86% усієї маси Сонячної системи завдяки ядерному синтезу водню в гелій. Щосекунди перетворює 600 мільйонів тонн водню в гелій, виділяючи колосальну енергію.", badge:"Зірка G2V", rawSize: 1392700, stats:[{label:"Діаметр",value:"1 392 700 км"},{label:"Маса",value:"1.989×10³⁰ кг"},{label:"Вік",value:"4.6 млрд р."},{label:"Температура",value:"15 млн °C"}], funFact:"Сонячне світло долає 150 млн км до Землі рівно за 8 хвилин і 20 секунд. Фотони, що несуть це світло, могли народитися ще 100 000 років тому у ядрі зірки!" },
+  "Меркурій":{ img:"https://upload.wikimedia.org/wikipedia/commons/4/4a/Mercury_in_true_color.jpg", category:"Скеляста планета", desc:"Меркурій — найближча до Сонця і найменша планета Сонячної системи. Не має атмосфери, тому температура вдень сягає +430 °C, а вночі падає до −180 °C. Один рік на Меркурії — лише 88 земних днів.", badge:"Скеляста планета", rawSize: 4879, stats:[{label:"Відстань від Сонця",value:"57.9 млн км"},{label:"Діаметр",value:"4 879 км"},{label:"Рік",value:"88 земних днів"},{label:"Супутники",value:"0"}], funFact:"На Меркурії доба (сонячний день) триває 176 земних днів — довше, ніж цілий рік! Планета обертається так повільно, що встигає зробити повний оберт навколо Сонця раніше, ніж обернутися навколо осі." },
+  "Венера":{ img:"https://upload.wikimedia.org/wikipedia/commons/e/e5/Venus-real_color.jpg", category:"Скеляста планета", desc:"Венера — найгарячіша планета (+465 °C), попри те що вдвічі далі від Сонця за Меркурій. Щільна CO₂-атмосфера з хмарами сірчаної кислоти створює жахливий парниковий ефект. Тиск на поверхні — як на глибині 900 м у океані.", badge:"Скеляста планета", rawSize: 12104, stats:[{label:"Відстань від Сонця",value:"108.2 млн км"},{label:"Діаметр",value:"12 104 км"},{label:"Температура",value:"+465 °C"},{label:"Супутники",value:"0"}], funFact:"Венера обертається у протилежному напрямку від більшості планет — там Сонце сходить на заході! А один день на Венері довший за цілий рік." },
+  "Земля":{ img:"https://upload.wikimedia.org/wikipedia/commons/9/97/The_Earth_seen_from_Apollo_17.jpg", category:"Скеляста планета", desc:"Земля — третя планета від Сонця та єдиний відомий нам світ, де існує розвинене життя. Захищена магнітним полем від сонячного вітру, вкрита рідкою водою на 71% поверхні. Єдина планета, де підтверджено тектоніку плит.", badge:"Наш дім", rawSize: 12742, stats:[{label:"Відстань від Сонця",value:"149.6 млн км"},{label:"Діаметр",value:"12 742 км"},{label:"Вік",value:"4.54 млрд р."},{label:"Супутники",value:"1"}], funFact:"Земля не є ідеальною кулею — вона трохи сплюснута на полюсах через обертання. Відстань від центру до екватора більша на 21 км, ніж до полюсів." },
+  "Марс":{ img:"https://upload.wikimedia.org/wikipedia/commons/0/02/OSIRIS_Mars_true_color.jpg", category:"Скеляста планета", desc:"Марс — четверта планета, відома червоним кольором через оксид заліза на поверхні. Тут розташована гора Олімп — найвища у Сонячній системі (21.9 км). У минулому на Марсі текли річки та існували озера.", badge:"Червона планета", rawSize: 6779, stats:[{label:"Відстань від Сонця",value:"227.9 млн км"},{label:"Діаметр",value:"6 779 км"},{label:"Доба",value:"24 год 37 хв"},{label:"Супутники",value:"2"}], funFact:"Гравітація на Марсі лише 38% від земної. Людина вагою 70 кг там важила б лише 26 кг! Саме тому вчені розглядають Марс як найреальнішу ціль для першої колонії." },
+  "Юпітер":{ img:"https://upload.wikimedia.org/wikipedia/commons/e/e2/Jupiter.jpg", category:"Газовий гігант", desc:"Юпітер — найбільша планета, у 318 разів масивніша за Землю. Велика Червона Пляма — ураган завширшки 1.3 діаметри Землі, що вирує понад 400 років. Має потужне магнітне поле та 95 офіційно підтверджених супутників.", badge:"Газовий гігант", rawSize: 139820, stats:[{label:"Відстань від Сонця",value:"778.5 млн км"},{label:"Діаметр",value:"139 820 км"},{label:"Маса",value:"318 M⊕"},{label:"Супутники",value:"95"}], funFact:"Якби Юпітер був у 80 разів масивнішим, він запалав би як зірка і наша система мала б два сонця. Юпітер — зірка, яка не відбулась!" },
+  "Сатурн":{ img:"https://upload.wikimedia.org/wikipedia/commons/c/c7/Saturn_during_Equinox.jpg", category:"Газовий гігант", desc:"Сатурн — шоста планета, знаменита грандіозною системою кілець з льоду та пилу. Є найменш щільною планетою Сонячної системи — вона плавала б у воді! Кільця простягаються на 282 000 км від планети.", badge:"Газовий гігант", rawSize: 116460, stats:[{label:"Відстань від Сонця",value:"1.43 млрд км"},{label:"Діаметр",value:"116 460 км"},{label:"Кільця",value:"282 000 км"},{label:"Супутники",value:"146"}], funFact:"Кільця Сатурна на вигляд масивні, але їхня товщина — лише від 10 до 1000 метрів. Якби кільця були розміром з аркуш паперу, той аркуш мав би площу стадіону!" },
+  "Уран":{ img:"https://upload.wikimedia.org/wikipedia/commons/3/3d/Uranus2.jpg", category:"Крижаний гігант", desc:"Уран — сьома планета, крижаний гігант блакитно-зеленого кольору через метан в атмосфері. Унікальна особливість: вісь обертання нахилена на 98°, тому планета буквально котиться по своїй орбіті боком.", badge:"Крижаний гігант", rawSize: 50724, stats:[{label:"Відстань від Сонця",value:"2.87 млрд км"},{label:"Діаметр",value:"50 724 км"},{label:"Нахил осі",value:"97.8°"},{label:"Супутники",value:"28"}], funFact:"На Урані полюс направлений до Сонця 42 роки, а потім 42 роки в темряву. Там бувають 'сезони' тривалістю в десятки земних років!" },
+  "Нептун":{ img:"https://upload.wikimedia.org/wikipedia/commons/5/56/Neptune_Full.jpg", category:"Крижаний гігант", desc:"Нептун — найдальша планета, темно-синій крижаний гігант. Тут дмуть найшвидші вітри у Сонячній системі — до 2 100 км/год. Темна Пляма — шторм розміром з Землю — з'являється і зникає за роки.", badge:"Крижаний гігант", rawSize: 49244, stats:[{label:"Відстань від Сонця",value:"4.5 млрд км"},{label:"Діаметр",value:"49 244 км"},{label:"Вітри",value:"2 100 км/год"},{label:"Супутники",value:"16"}], funFact:"Один рік на Нептуні триває 165 земних років. Нептун був відкритий у 1846 році і повернувся у вихідну точку лише у 2011 — вперше від відкриття!" },
+  "Місяць":{ img:"https://upload.wikimedia.org/wikipedia/commons/e/e1/FullMoon2010.jpg", category:"Супутник Землі", desc:"Місяць — єдиний природний супутник Землі і п'ятий за розміром у Сонячній системі. Відіграє ключову роль у стабілізації осі нахилу Землі та виникненні океанічних припливів. 12 людей ходили по його поверхні.", badge:"Супутник Землі", rawSize: 3474, stats:[{label:"Відстань",value:"384 400 км"},{label:"Діаметр",value:"3 474 км"},{label:"Вік",value:"4.51 млрд р."},{label:"Гравітація",value:"1/6 земної"}], funFact:"Місяць поступово віддаляється від Землі зі швидкістю 3.8 см на рік. Через мільярди років сонячні затемнення зникнуть — Місяць буде занадто далеко, щоб закривати Сонце!" },
+
+  "Каллісто":{ img:"https://upload.wikimedia.org/wikipedia/commons/e/e9/Callisto.jpg", category:"Супутник Юпітера", desc:"Каллісто має найстарішу та найбільш кратеровану поверхню в Сонячній системі.", badge:"Супутник", rawSize: 4820, stats:[{label:"Діаметр",value:"4 820 км"},{label:"Вік поверхні",value:"~4 млрд р."},{label:"Температура",value:"-139 °C"},{label:"Гравітація",value:"0.126 g"}], funFact:"На Каллісто практично немає геологічної активності, тому її кратери залишаються незмінними мільярди років." },
+
+  "Плутон":{ img:"https://upload.wikimedia.org/wikipedia/commons/e/ef/Pluto_in_True_Color_-_High-Res.jpg", category:"Карликова планета", desc:"Плутон — найвідоміша карликова планета пояса Койпера. Має відоме «серце» — рівнину Томбо зі льодом азоту. У 2015 New Horizons вперше показало деталі поверхні — гори висотою 3 500 м та синій туман над горизонтом.", badge:"Карликова планета", rawSize: 2376, stats:[{label:"Відстань від Сонця",value:"5.9 млрд км"},{label:"Діаметр",value:"2 376 км"},{label:"Рік",value:"248 земних р."},{label:"Супутники",value:"5"}], funFact:"Якщо стати на поверхні Плутона, Сонце виглядало б як дуже яскрава зірка — воно буде у 1000 разів тьмяніше, ніж ми бачимо з Землі. Там завжди сутінки." },
+
+  "Телескоп Габбл":{ img:"https://upload.wikimedia.org/wikipedia/commons/3/3f/HST-SM4.jpeg", category:"Космічний телескоп", desc:"Габбл — автоматична обсерваторія на орбіті Землі, яка змінила наше розуміння віку Всесвіту та його розширення.", badge:"Обсерваторія", rawSize: 0.013, stats:[{label:"Висота орбіти",value:"~540 км"},{label:"Швидкість",value:"7.5 км/с"},{label:"Запуск",value:"1990 рік"},{label:"Маса",value:"11 тонн"}], funFact:"Габбл настільки стабільний, що може утримувати фокус на цілі розміром з монету на відстані 300 км!" },
+  "Андромеда":{ img:"https://upload.wikimedia.org/wikipedia/commons/9/98/Andromeda_Galaxy_%28with_h-alpha%29.jpg", category:"Спіральна галактика", desc:"Андромеда (M31) — найближча до нас велика галактика, що містить близько трильйона зірок. Вона рухається до Чумацького Шляху зі швидкістю 110 км/с і зіткнеться з ним через 4.5 млрд років.", badge:"Spiral Galaxy", rawSize: 152000, stats:[{label:"Відстань",value:"2.5 млн св.р."},{label:"Діаметр",value:"152 000 св.р."},{label:"Зірок",value:"~1 трильйон"},{label:"Швидкість",value:"110 км/с до нас"}], funFact:"Зіткнення Андромеди та Чумацького Шляху не знищить більшість зірок — у галактиках занадто багато порожнього простору. Але обидві галактики змішаються в одну еліптичну за мільярди років." }
+};
+
+const MISSIONS = [
+  {id:"perseverance", name:"Perseverance Rover", agency:"NASA", status:"active", target:"Марс", progress:72, shortDesc:"Пошук мікробного життя на Марсі", desc:"Марсохід Perseverance приземлився в кратері Єзеро 18 лютого 2021 року. Він збирає зразки ґрунту.", facts:["Злетів 30.07.2020","Посадка 18.02.2021","Дрон Ingenuity на борту","30+ зразків зібрано"], launchYear:"2020", endYear:"~2028"},
+  {id:"juno", name:"Juno", agency:"NASA", status:"active", target:"Юпітер", progress:88, shortDesc:"Дослідження магнітосфери Юпітера", desc:"Космічний зонд Juno обертається навколо Юпітера з 2016 року, досліджуючи магнітне поле та гравітацію.", facts:["Прибув 04.07.2016","Орбіта 53 дні","53+ облети","Фото Ганімеду 2021"], launchYear:"2011", endYear:"~2025"},
+  {id:"europa-clipper", name:"Europa Clipper", agency:"NASA", status:"active", target:"Європа", progress:15, shortDesc:"Пошук умов для життя", desc:"Europa Clipper здійснить 49 близьких прольотів над Європою. Досліджуватиме товщину льоду та океан.", facts:["Запуск 14.10.2024","Прибуття 2030","49 прольотів","Радар крізь лід"], launchYear:"2024", endYear:"2034"},
+  {id:"cassini", name:"Cassini-Huygens", agency:"NASA/ESA", status:"completed", target:"Сатурн", progress:100, shortDesc:"Дослідження Сатурна", desc:"Cassini досліджував Сатурн з 2004 по 2017 рік, виявив гейзери Енцелада та відкрив нові деталі кілець.", facts:["Запуск 15.10.1997","Орбіта 2004–2017","294 оберти","Huygens на Титані"], launchYear:"1997", endYear:"2017"},
+  {id:"artemis", name:"Artemis III", agency:"NASA", status:"future", target:"Місяць", progress:20, shortDesc:"Повернення людини на Місяць", desc:"Artemis III стане першою пілотованою посадкою з 1972 року поблизу Південного полюса.", facts:["Запуск ~2026","2 астронавти","Південний полюс","Starship як лендер"], launchYear:"2026", endYear:"2026"}
+];
+
+const CATEGORIES = {
+  "⭐ Зірка": ["Сонце"],
+  "🪨 Скелясті планети": ["Меркурій","Венера","Земля","Марс"],
+  "🌀 Газові та крижані гіганти": ["Юпітер","Сатурн","Уран","Нептун"],
+  "🌕 Супутники": ["Місяць","Каллісто"],
+  "🔴 Інше": ["Плутон","Телескоп Габбл","Андромеда"]
+};
+
+let currentObj = "Земля";
+let viewedSet = new Set(["Земля"]);
+let is3DInitialized = false;
+
+// ── INIT LOAD ──
+document.addEventListener('DOMContentLoaded', () => {
+  // Load Theme
+  const savedColor = localStorage.getItem('cosmo_theme');
+  if (savedColor) {
+    document.documentElement.style.setProperty('--c1', savedColor);
+    document.getElementById('theme-color').value = savedColor;
+  }
+  
+  updateXPUI();
+  buildObjList();
+  buildNavMissions();
+  populateCompareDropdown();
+  document.getElementById('nav-obj-count').textContent=Object.keys(OBJECTS).length;
+  openObject('Земля', false);
+});
+
+
+// ── BUILD UI ELEMENTS ──
+function buildObjList(){
+  const el = document.getElementById('obj-list');
+  el.innerHTML='';
+  for(const [catLabel,names] of Object.entries(CATEGORIES)){
+    el.innerHTML+=`<div class="cat-label">${catLabel}</div>`;
+    for(const name of names){
+      const d=OBJECTS[name];if(!d)continue;
+      el.innerHTML+=`<div class="obj-item ${name===currentObj?'active':''}" onclick="openObject('${name.replace(/'/g,'\\\'')}')" >
+        <div class="obj-thumb"><img src="${d.img}" alt="${name}" loading="lazy"></div>
+        <div class="obj-info"><div class="name">${name}</div><div class="type">${d.badge}</div></div>
+      </div>`;
+    }
+  }
+}
+
+function buildNavMissions(){
+  const el = document.getElementById('nav-missions-list');
+  const activeMissions = MISSIONS.filter(m=>m.status==='active').slice(0,5);
+  // Optional chaining is fine, simply fallback to an empty string if element doesn't exist
+  if (!el) return;
+  el.innerHTML = activeMissions.map(m=>{
+    const colors={active:'#22c55e',completed:'rgba(221,238,255,.4)',future:'#a855f7'};
+    const c = colors[m.status]||'#00d2ff';
+    return `<div class="mission-dot" onclick="openObject('${m.target.replace(/'/g,'\\\'')}')" >
+      <div class="mdot" style="background:${c};box-shadow:0 0 5px ${c};animation:pulse 2s infinite"></div>
+      <div class="mname">${m.name.split(' ')[0]}</div>
+      <span class="tip" style="min-width:210px;">🚀 ${m.name} · ${m.target} · ${m.shortDesc}</span>
+    </div>`;
+  }).join('');
+}
+
+
+// ── OPEN OBJECT ──
+window.openObject = function(name, awardXp = true){
+  currentObj = name;
+  const d = OBJECTS[name];
+  if(!d)return;
+  
+  if (awardXp && !viewedSet.has(name)) {
+    addXP(10, `Досліджено: ${name}`);
+  }
+
+  document.getElementById('planet-img').src = d.img;
+  document.getElementById('planet-img').alt = name;
+  document.getElementById('planet-title').textContent = name;
+  document.getElementById('planet-category').textContent = d.category;
+  document.getElementById('planet-desc').textContent = d.desc;
+  document.getElementById('top-title').textContent = name;
+  document.getElementById('top-badge').textContent = d.badge;
+  document.getElementById('top-category').textContent = d.category;
+
+  // Stats
+  const sr=document.getElementById('stats-row');
+  sr.innerHTML=d.stats.map(s=>`<div class="stat-card"><div class="label">${s.label}</div><div class="value">${s.value}</div></div>`).join('');
+
+  // Forum info
+  document.getElementById('forum-obj-name').textContent = name;
+  document.getElementById('forum-obj-category').textContent = d.category;
+  document.getElementById('forum-obj-img').src = d.img;
+  document.getElementById('forum-obj-img').alt = name;
+  document.getElementById('compose-obj-name').textContent = name;
+  document.getElementById('forum-context').innerHTML = `Ви зараз обговорюєте <strong>${name}</strong> — ${d.category.toLowerCase()}. ${d.desc.split('.')[0]}.`;
+
+  buildMissionsForObject();
+  buildGallery();
+  populateCompareDropdown();
+  renderCompare();
+  buildObjList();
+  loadPosts();
+  viewedSet.add(name);
+  
+  const ev=document.getElementById('nav-viewed');
+  if(ev)ev.textContent=viewedSet.size;
+  
+  if (awardXp) showToast(`🔭 Відкрито: ${name}`,`🪐`);
+};
+
+// ── TABS ──
+function setContentTab(tab,e){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  if(e&&e.target)e.target.classList.add('active');
+  ['info','gallery','compare','missions','forum','threed'].forEach(s=>{
+    const el=document.getElementById(s+'-section');
+    if(el)el.style.display = (s===tab) ? 'block' : 'none';
+  });
+  if(tab==='threed'&&!is3DInitialized){init3DSolarSystem();is3DInitialized=true;}
+}
+
+// ── GALLERY GENERATOR ──
+function buildGallery() {
+  const grid = document.getElementById('gallery-grid');
+  const d = OBJECTS[currentObj];
+  if(!d) return;
+
+  const filters = [
+    {name: "Оптичний (True Color)", css: ""},
+    {name: "Радіодіапазон", css: "filter: grayscale(1) contrast(1.5);"},
+    {name: "Інфрачервоний", css: "filter: hue-rotate(180deg) saturate(2);"},
+    {name: "Ультрафіолет", css: "filter: invert(1) hue-rotate(90deg);"},
+    {name: "Пиловий спектр", css: "filter: sepia(1) saturate(3) hue-rotate(-30deg);"},
+    {name: "Рентгенівський", css: "filter: contrast(2) brightness(1.5) grayscale(0.8) hue-rotate(240deg);"}
+  ];
+
+  grid.innerHTML = filters.map(f => `
+    <div class="gal-item" onclick="showToast('Аналіз: ${f.name}', '📸'); addXP(2, 'Спектральний аналіз')">
+      <img src="${d.img}" alt="${currentObj} — ${f.name}" loading="lazy" style="${f.css}">
+      <div class="gal-filter-name">${f.name}</div>
+    </div>
+  `).join('');
+}
+
+
+// ── COMPARE SYSTEM ──
+function populateCompareDropdown() {
+  const sel = document.getElementById('compare-select');
+  const names = Object.keys(OBJECTS).filter(k => k !== currentObj);
+  sel.innerHTML = names.map(k => `<option value="${k}">${k}</option>`).join('');
+  // pick a smart default: prefer Місяць if available, else first option
+  if (names.includes("Місяць")) sel.value = "Місяць";
+  else if (names.includes("Марс")) sel.value = "Марс";
+  else sel.value = names[0];
+}
+
+function renderCompare() {
+  const obj1 = OBJECTS[currentObj];
+  const targetName = document.getElementById('compare-select').value;
+  const obj2 = OBJECTS[targetName];
+
+  if (!obj1 || !obj2) return;
+
+  document.getElementById('comp-th-1').textContent = currentObj;
+  document.getElementById('comp-th-2').textContent = targetName;
+
+  // Build Table
+  const tbody = document.getElementById('compare-tbody');
+  
+  // Try to match stats by label
+  let rowsHtml = '';
+  const labels1 = obj1.stats.map(s => s.label);
+  const labels2 = obj2.stats.map(s => s.label);
+  const commonLabels = [...new Set([...labels1, ...labels2])].slice(0, 5); // max 5
+
+  commonLabels.forEach(lbl => {
+    let val1 = obj1.stats.find(s => s.label === lbl)?.value || "Немає даних";
+    let val2 = obj2.stats.find(s => s.label === lbl)?.value || "Немає даних";
+    rowsHtml += `<tr>
+      <td><strong>${val1}</strong></td>
+      <td style="text-align:center; color:var(--c1); font-family:var(--font-display); text-transform:uppercase;">${lbl}</td>
+      <td style="text-align:right;"><strong>${val2}</strong></td>
+    </tr>`;
+  });
+  tbody.innerHTML = rowsHtml;
+
+  // Visual Size Comp
+  const visWrap = document.getElementById('compare-visual');
+  let s1 = obj1.rawSize || 1;
+  let s2 = obj2.rawSize || 1;
+  
+  // Normalize sizes for visual display (logarithmic scale approach so Sun doesn't break UI)
+  let maxPx = 180;
+  let minPx = 20;
+  
+  let scale1, scale2;
+  if (s1 === s2) { scale1 = 100; scale2 = 100; }
+  else if (s1 > s2) { scale1 = maxPx; scale2 = Math.max(minPx, (s2/s1) * maxPx); }
+  else { scale2 = maxPx; scale1 = Math.max(minPx, (s1/s2) * maxPx); }
+
+  // Adjust extreme differences (like Sun vs ISS) using math.log
+  if (Math.abs(s1 - s2) > 100000) {
+     scale1 = Math.max(minPx, Math.log10(s1) * 15);
+     scale2 = Math.max(minPx, Math.log10(s2) * 15);
+  }
+
+  visWrap.innerHTML = `
+    <div class="comp-orb-wrap">
+      <div class="comp-orb" style="width:${scale1}px; height:${scale1}px;"><img src="${obj1.img}" alt="${currentObj}" loading="lazy"></div>
+      <div class="comp-name">${currentObj}</div>
+    </div>
+    <div style="font-family:var(--font-display); font-size:24px; color:var(--muted);">VS</div>
+    <div class="comp-orb-wrap">
+      <div class="comp-orb" style="width:${scale2}px; height:${scale2}px;"><img src="${obj2.img}" alt="${targetName}" loading="lazy"></div>
+      <div class="comp-name">${targetName}</div>
+    </div>
+  `;
+}
+
+
+// ── QUIZ ACADEMY ──
+const QUIZ_POOL = [
+  {q: "Яка планета найгарячіша у Сонячній системі?", a: ["Венера", "Меркурій", "Марс", "Юпітер"], correct: 0},
+  {q: "Яка планета обертається «на боці»?", a: ["Уран", "Нептун", "Сатурн", "Земля"], correct: 0},
+  {q: "Де знаходиться найбільший вулкан системи (Олімп)?", a: ["Марс", "Венера", "Каллісто", "Місяць"], correct: 0},
+  {q: "Скільки триває один рік на Плутоні?", a: ["248 земних років", "10 земних років", "88 днів", "1000 років"], correct: 0},
+  {q: "Яка галактика найближча до нашої?", a: ["Андромеда", "Трикутник", "Сомбреро", "Магелланові Хмари"], correct: 0}
+];
+
+let currentQuiz = null;
+
+function startQuiz() {
+  openModal('quiz-overlay');
+  currentQuiz = QUIZ_POOL[Math.floor(Math.random() * QUIZ_POOL.length)];
+  
+  document.getElementById('quiz-q').textContent = currentQuiz.q;
+  const optsContainer = document.getElementById('quiz-opts');
+  optsContainer.innerHTML = '';
+  
+  // Shuffle options
+  let shuffledOpts = currentQuiz.a.map((opt, idx) => ({text: opt, isCorrect: idx === currentQuiz.correct}))
+                                   .sort(() => Math.random() - 0.5);
+
+  shuffledOpts.forEach(opt => {
+    let btn = document.createElement('button');
+    btn.className = 'quiz-btn';
+    btn.textContent = opt.text;
+    btn.onclick = () => answerQuiz(btn, opt.isCorrect);
+    optsContainer.appendChild(btn);
+  });
+}
+
+function answerQuiz(btn, isCorrect) {
+  // Disable all
+  const btns = document.getElementById('quiz-opts').querySelectorAll('.quiz-btn');
+  btns.forEach(b => b.style.pointerEvents = 'none');
+
+  if (isCorrect) {
+    btn.classList.add('correct');
+    showToast("Правильно! +50 XP", "🎉");
+    addXP(50);
+  } else {
+    btn.classList.add('wrong');
+    // highlight correct
+    btns.forEach(b => {
+      if(b.textContent === currentQuiz.a[currentQuiz.correct]) b.classList.add('correct');
+    });
+    showToast("Неправильно. Спробуй ще завтра!", "❌");
+  }
+  
+  setTimeout(() => closeModal('quiz-overlay'), 2000);
+}
+
+
+// ── MODALS & UTILS ──
+function openModal(id) { document.getElementById(id).classList.add('active'); }
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+function resetAllData() {
+  if(confirm("Ви впевнені? Весь досвід та повідомлення форуму будуть видалені!")) {
+    localStorage.clear();
+    location.reload();
+  }
+}
+
+// ── MISSIONS ──
+function buildMissionsForObject(){
+  const el = document.getElementById('missions-grid');
+  let relevant = MISSIONS.filter(m=>m.target===currentObj||m.target.includes(currentObj));
+  if(relevant.length===0) relevant = MISSIONS; 
+  el.innerHTML = relevant.map(m=>{
+    const statusLabel={active:'АКТИВНА',completed:'ЗАВЕРШЕНА',future:'МАЙБУТНЯ'}[m.status]||m.status;
+    const cardClass={active:'active-mission',completed:'completed-mission',future:'future-mission'}[m.status]||'';
+    const progressW = m.status==='completed'?100:(m.status==='future'?m.progress:m.progress);
+    return `<div class="mission-card ${cardClass}">
+      <div class="mc-header">
+        <div class="mc-title">${m.name}</div>
+        <div class="mc-status ${m.status}">${statusLabel}</div>
+      </div>
+      <div class="mc-agency">${m.agency} · ${m.launchYear}–${m.endYear}</div>
+      <div style="margin-bottom:8px;font-size:12px;color:var(--c1);font-family:var(--font-display);letter-spacing:.5px;">${m.shortDesc}</div>
+      <div class="mc-desc">${m.desc}</div>
+      <div class="mc-facts">${m.facts.map(f=>`<span class="mc-fact">${f}</span>`).join('')}</div>
+      ${m.status!=='future'?`<div class="mc-progress-wrap">
+        <div class="mc-progress-label"><span>ПРОГРЕС</span><span>${progressW}%</span></div>
+        <div class="mc-progress-bar"><div class="mc-progress-fill" style="width:${progressW}%"></div></div>
+      </div>`:''}
+    </div>`;
+  }).join('');
+}
+
+// ── FORUM ──
+function postMsg(){
+  const nick=document.getElementById('nick').value.trim()||'Анонім';
+  const msg=document.getElementById('msg-input').value.trim();
+  if(!msg)return;
+  const key='forum_'+currentObj;
+  const posts=JSON.parse(localStorage.getItem(key)||'[]');
+  posts.push({nick,msg,obj:currentObj,time:new Date().toLocaleTimeString('uk',{hour:'2-digit',minute:'2-digit'})});
+  localStorage.setItem(key,JSON.stringify(posts));
+  document.getElementById('msg-input').value='';
+  loadPosts();
+  addXP(15, "Повідомлення надіслано");
+}
+
+function loadPosts(){
+  const key='forum_'+currentObj;
+  const posts=JSON.parse(localStorage.getItem(key)||'[]');
+  const el=document.getElementById('posts-list');
+  if(!posts.length){
+    el.innerHTML=`<div class="empty-posts"><span class="ep-icon">🌌</span>Поки ніхто не писав про ${currentObj}<div class="ep-hint">Будьте першим дослідником!</div></div>`;
+    return;
+  }
+  el.innerHTML=posts.slice().reverse().map(p=>`<div class="post-item">
+    <div class="post-meta"><span class="pnick">${escHtml(p.nick)}</span><span class="ptime">${p.time||''}</span></div>
+    <div class="pobj-tag">📍 ${escHtml(p.obj||currentObj)}</div>
+    <div class="post-text">${escHtml(p.msg)}</div>
+  </div>`).join('');
+}
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+document.getElementById('msg-input').addEventListener('keydown',e=>{if(e.key==='Enter')postMsg();});
+
+// ── TICKER ──
+function buildTicker() {
+  const facts = Object.entries(OBJECTS).filter(([,v]) => v.funFact).map(([name,v]) => `<span>★</span>${name}: ${v.funFact}`);
+  const doubled = [...facts, ...facts]; // seamless loop
+  document.getElementById('ticker-inner').innerHTML = doubled.map(f => `<span class="ticker-item"><span>★</span>${f.replace('<span>★</span>','')}</span>`).join('');
+}
+
+// ── FAVORITES ──
+let favorites = JSON.parse(localStorage.getItem('cosmo_favs') || '[]');
+
+function toggleFav(name, e) {
+  e.stopPropagation();
+  if (favorites.includes(name)) {
+    favorites = favorites.filter(f => f !== name);
+  } else {
+    favorites.push(name);
+    showToast(`⭐ Додано до обраних: ${name}`, '⭐');
+    addXP(5, 'Додано до обраних');
+  }
+  localStorage.setItem('cosmo_favs', JSON.stringify(favorites));
+  buildObjList();
+  buildFavSection();
+}
+
+function buildFavSection() {
+  const el = document.getElementById('fav-section');
+  if (!el) return;
+  if (!favorites.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="fav-section-label">⭐ Обрані</div>` +
+    favorites.map(name => {
+      const d = OBJECTS[name]; if(!d) return '';
+      return `<div class="fav-item" onclick="openObject('${name.replace(/'/g,"\\'")}')">
+        <div class="fav-thumb"><img src="${d.img}" alt="${name}" loading="lazy"></div>
+        <span>${name}</span>
+        <span style="margin-left:auto;font-size:11px;opacity:.5;cursor:pointer;" onclick="toggleFav('${name.replace(/'/g,"\\'")}', event)">✕</span>
+        <span class="tip">${d.category}</span>
+      </div>`;
+    }).join('');
+}
+
+// ── SEARCH / FILTER ──
+function filterObjList(query) {
+  const q = query.trim().toLowerCase();
+  const el = document.getElementById('obj-list');
+  if (!q) { buildObjList(); return; }
+
+  const matches = Object.entries(OBJECTS).filter(([name, d]) =>
+    name.toLowerCase().includes(q) ||
+    d.category.toLowerCase().includes(q) ||
+    d.badge.toLowerCase().includes(q)
+  );
+
+  if (!matches.length) {
+    el.innerHTML = `<div class="no-results">🌌 Нічого не знайдено</div>`;
+    return;
+  }
+
+  el.innerHTML = matches.map(([name, d]) => `
+    <div class="obj-item ${name === currentObj ? 'active' : ''}" onclick="openObject('${name.replace(/'/g,"\\'")}')">
+      <div class="obj-thumb"><img src="${d.img}" alt="${name}" loading="lazy"></div>
+      <div class="obj-info"><div class="name">${name}</div><div class="type">${d.badge}</div></div>
+      <span class="fav-star ${favorites.includes(name)?'starred':''}" onclick="toggleFav('${name.replace(/'/g,"\\'")}',event)">★</span>
+    </div>`).join('');
+}
+
+// ── KEYBOARD SHORTCUTS ──
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.key === 'r' || e.key === 'R') toggleRandom();
+  if (e.key === 'Escape') {
+    ['surprise-overlay','quiz-overlay','settings-overlay'].forEach(id => {
+      document.getElementById(id)?.classList.remove('active');
+    });
+  }
+});
+
+// ── FADE TRANSITION ON OBJECT OPEN ──
+const _origOpenObject = window.openObject;
+window.openObject = function(name, awardXp = true) {
+  const orb = document.getElementById('planet-img')?.parentElement;
+  if (orb) {
+    orb.classList.add('fade-out');
+    setTimeout(() => {
+      _origOpenObject(name, awardXp);
+      orb.classList.remove('fade-out');
+    }, 220);
+  } else {
+    _origOpenObject(name, awardXp);
+  }
+};
+
+// ── PATCH buildObjList to add fav stars ──
+const _origBuildObjList = buildObjList;
+buildObjList = function() {
+  const el = document.getElementById('obj-list');
+  el.innerHTML = '';
+  for (const [catLabel, names] of Object.entries(CATEGORIES)) {
+    el.innerHTML += `<div class="cat-label">${catLabel}</div>`;
+    for (const name of names) {
+      const d = OBJECTS[name]; if (!d) continue;
+      el.innerHTML += `<div class="obj-item ${name===currentObj?'active':''}" onclick="openObject('${name.replace(/'/g,"\\'")}')">
+        <div class="obj-thumb"><img src="${d.img}" alt="${name}" loading="lazy"></div>
+        <div class="obj-info"><div class="name">${name}</div><div class="type">${d.badge}</div></div>
+        <span class="fav-star ${favorites.includes(name)?'starred':''}" onclick="toggleFav('${name.replace(/'/g,"\\'")}',event)">★</span>
+      </div>`;
+    }
+  }
+  buildFavSection();
+};
+
+// ── INIT extras ──
+document.addEventListener('DOMContentLoaded', () => {
+  buildTicker();
+  buildFavSection();
+});
+
+// ── CLOCK ──
+function updateClock(){
+  const now=new Date();
+  const hh=String(now.getUTCHours()).padStart(2,'0');
+  const mm=String(now.getUTCMinutes()).padStart(2,'0');
+  const ss=String(now.getUTCSeconds()).padStart(2,'0');
+  const el=document.getElementById('nav-time');if(el)el.textContent=hh+':'+mm+':'+ss;
+  const days=['Нд','Пн','Вт','Ср','Чт','Пт','Сб'];
+  const months=['Січ','Лют','Бер','Кві','Тра','Чер','Лип','Сер','Вер','Жов','Лис','Гру'];
+  const de=document.getElementById('nav-date');
+  if(de)de.textContent=days[now.getUTCDay()]+' '+now.getUTCDate()+' '+months[now.getUTCMonth()];
+}
+setInterval(updateClock,1000);updateClock();
+
+// ── TOAST ──
+let toastTimer;
+function showToast(msg,icon='🚀'){
+  const t=document.getElementById('toast');
+  document.getElementById('toast-msg').textContent=msg;
+  document.getElementById('toast-icon').textContent=icon;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+// ── RANDOM & SURPRISE ──
+function toggleRandom(){
+  const names=Object.keys(OBJECTS);
+  let pick;
+  do{pick=names[Math.floor(Math.random()*names.length)];}while(pick===currentObj&&names.length>1);
+  openObject(pick);
+}
+
+const ALL_FACTS = Object.entries(OBJECTS).filter(([,v])=>v.funFact).map(([name,v])=>({name,fact:v.funFact,img:v.img}));
+function showSurprise(){
+  const f = ALL_FACTS[Math.floor(Math.random()*ALL_FACTS.length)];
+  document.getElementById('surprise-title').textContent = f.name;
+  document.getElementById('surprise-fact').textContent = f.fact;
+  openModal('surprise-overlay');
+  addXP(5, "Новий факт знайдено");
+}
+function showSurpriseForCurrent(){
+  const d = OBJECTS[currentObj];
+  if(!d||!d.funFact) return showSurprise();
+  document.getElementById('surprise-title').textContent = `✨ ${currentObj}`;
+  document.getElementById('surprise-fact').textContent = d.funFact;
+  openModal('surprise-overlay');
+  addXP(5, "Секрет об'єкта розкрито");
+}
+
+
+// ── 3D SOLAR SYSTEM ──
+let isAutoPilot = false;
+let solarGroupMain;
+
+function toggleAutoPilot() {
+  isAutoPilot = !isAutoPilot;
+  const btn = document.getElementById('btn-autopilot');
+  if(isAutoPilot) {
+    btn.classList.add('active');
+    btn.textContent = 'Автопілот: УВІМК';
+    showToast("Автопілот увімкнено. Розпочато екскурсію.", "🛸");
+  } else {
+    btn.classList.remove('active');
+    btn.textContent = 'Автопілот: ВИМК';
+  }
+}
+
+function init3DSolarSystem(){
+  const container=document.getElementById('threed-canvas-container');
+  const scene=new THREE.Scene();
+  const camera=new THREE.PerspectiveCamera(45,container.clientWidth/container.clientHeight,.1,2000);
+  camera.position.set(0,90,160);camera.lookAt(0,0,0);
+  const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+  renderer.setSize(container.clientWidth,container.clientHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  container.appendChild(renderer.domElement);
+  
+  solarGroupMain = new THREE.Group();
+  scene.add(solarGroupMain);
+  const pointLight=new THREE.PointLight(0xfff4cc,3,600);scene.add(pointLight);
+  scene.add(new THREE.AmbientLight(0x111828,.8));
+
+  const sunGeo=new THREE.SphereGeometry(13,32,32);
+  const sunMat=new THREE.MeshBasicMaterial({color:0xffcc22});
+  const sun=new THREE.Mesh(sunGeo,sunMat);solarGroupMain.add(sun);
+
+  const coronaGeo=new THREE.SphereGeometry(16,32,32);
+  const coronaMat=new THREE.MeshBasicMaterial({color:0xff9900,transparent:true,opacity:.12,side:THREE.BackSide});
+  solarGroupMain.add(new THREE.Mesh(coronaGeo,coronaMat));
+
+  const planetsData=[
+    {name:'Mercury',color:0x8a8a8a,dist:22,size:1.1,speed:.04},
+    {name:'Venus',color:0xe8c56a,dist:32,size:2.1,speed:.016},
+    {name:'Earth',color:0x2e6fb5,dist:48,size:2.3,speed:.011},
+    {name:'Mars',color:0xc1440e,dist:64,size:1.7,speed:.008},
+    {name:'Jupiter',color:0xd4a574,dist:96,size:7,speed:.003},
+    {name:'Saturn',color:0xc8b560,dist:130,size:5.5,speed:.0013},
+    {name:'Uranus',color:0x7de8e8,dist:158,size:3.5,speed:.0007},
+    {name:'Neptune',color:0x3f54ba,dist:182,size:3.2,speed:.0004},
+  ];
+
+  const planets=[];
+  planetsData.forEach(p=>{
+    const geo=new THREE.SphereGeometry(p.size,24,24);
+    const mat=new THREE.MeshStandardMaterial({color:p.color,roughness:.75,metalness:.1});
+    const mesh=new THREE.Mesh(geo,mat);
+    const pivot=new THREE.Group();mesh.position.x=p.dist;pivot.add(mesh);solarGroupMain.add(pivot);
+    
+    const ring=new THREE.RingGeometry(p.dist-.15,p.dist+.15,80);
+    const ringMat=new THREE.MeshBasicMaterial({color:0x00d2ff,transparent:true,opacity:.06,side:THREE.DoubleSide});
+    const ringMesh=new THREE.Mesh(ring,ringMat);ringMesh.rotation.x=Math.PI/2;solarGroupMain.add(ringMesh);
+    
+    if(p.name==='Saturn'){
+      const sr=new THREE.RingGeometry(7,13,64);
+      const srm=new THREE.MeshBasicMaterial({color:0xd4bf8a,transparent:true,opacity:.4,side:THREE.DoubleSide});
+      const srMesh=new THREE.Mesh(sr,srm);srMesh.rotation.x=Math.PI/3;mesh.add(srMesh);
+    }
+    planets.push({pivot,mesh,speed:p.speed});
+  });
+
+  let time = 0;
+  function animate(){
+    requestAnimationFrame(animate);
+    planets.forEach(p=>{p.pivot.rotation.y+=p.speed;p.mesh.rotation.y+=.015;});
+    sun.rotation.y+=.004;
+    
+    if (isAutoPilot) {
+      time += 0.005;
+      camera.position.x = Math.sin(time) * 160;
+      camera.position.z = Math.cos(time) * 160;
+      camera.position.y = 90 + Math.sin(time * 2) * 30;
+      camera.lookAt(0,0,0);
+    }
+
+    renderer.render(scene,camera);
+  }
+  animate();
+  
+  window.addEventListener('resize',()=>{
+    if(container.clientWidth>0){camera.aspect=container.clientWidth/container.clientHeight;camera.updateProjectionMatrix();renderer.setSize(container.clientWidth,container.clientHeight);}
+  });
+  
+  let isDragging=false,prev={x:0,y:0};
+  container.addEventListener('mousedown',()=>isDragging=true);
+  container.addEventListener('mouseup',()=>isDragging=false);
+  container.addEventListener('mouseleave',()=>isDragging=false);
+  container.addEventListener('mousemove',e=>{
+    if(isDragging && !isAutoPilot){
+      solarGroupMain.rotation.y+=(e.offsetX-prev.x)*.008;
+      solarGroupMain.rotation.x+=(e.offsetY-prev.y)*.008;
+    }
+    prev={x:e.offsetX,y:e.offsetY};
+  });
+  container.addEventListener('wheel',e=>{
+    if(!isAutoPilot) {
+      camera.position.z=Math.max(60,Math.min(350,camera.position.z+e.deltaY*.2));
+      camera.position.y=Math.max(20,Math.min(200,camera.position.y+e.deltaY*.08));
+    }
+    e.preventDefault();
+  },{passive:false});
+}
+
+// ═══════════════════════════════════════════════════════
+// ☄️  METEOR SHOOTER GAME — HARDCORE EDITION v2
+// ═══════════════════════════════════════════════════════
+(function(){
+  // ── State ──
+  let gCanvas, gCtx, gW, gH;
+  let gameRunning = false;
+  let gameRAF = null;
+  let score=0, hiScore=0, lives=3, wave=1;
+  let totalKills=0, totalShots=0, maxCombo=0;
+  let ship, bullets=[], meteors=[], particles=[], stars=[], pickups=[], enemyBullets=[];
+  let shootCooldown=0, gameOver=false, invincible=0, waveClearing=false, lastTime=0;
+  // WASD movement
+  const keys={};
+  // Combo system
+  let combo=1, comboTimer=0;
+  // Powerups active
+  let puShield=0, puRapid=0, puBomb=0;
+  let mouseX=0, mouseY=0;
+  let screenShake=0;
+  let bgScrollY=0;
+
+  // ── Open / close ──
+  window.openGameModal = function(){
+    openModal('game-overlay');
+    initGameCanvas();
+    document.getElementById('game-hiscore-val').textContent = hiScore;
+  };
+  window.closeGameModal = function(){
+    closeModal('game-overlay');
+    if(gameRAF){ cancelAnimationFrame(gameRAF); gameRAF=null; }
+    gameRunning=false;
+    removeKeyListeners();
+  };
+
+  function addKeyListeners(){
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+  }
+  function removeKeyListeners(){
+    window.removeEventListener('keydown', onKeyDown);
+    window.removeEventListener('keyup', onKeyUp);
+  }
+  function onKeyDown(e){
+    keys[e.code]=true;
+    if(e.code==='Space'&&gameRunning){ e.preventDefault(); tryShoot(); }
+    if(e.code==='KeyB'&&gameRunning){ e.preventDefault(); activateBomb(); }
+  }
+  function onKeyUp(e){ keys[e.code]=false; }
+
+  function initGameCanvas(){
+    gCanvas=document.getElementById('gameCanvas');
+    gCtx=gCanvas.getContext('2d');
+    resizeGame();
+    window.addEventListener('resize', resizeGame);
+    addKeyListeners();
+
+    gCanvas.addEventListener('mousemove', e=>{
+      const rect=gCanvas.getBoundingClientRect();
+      mouseX=e.clientX-rect.left; mouseY=e.clientY-rect.top;
+      if(gameRunning&&ship){
+        ship.angle=Math.atan2(mouseY-ship.y, mouseX-ship.x)+Math.PI/2;
+      }
+    });
+    gCanvas.addEventListener('mousedown', e=>{ if(gameRunning) tryShoot(); });
+    gCanvas.addEventListener('touchmove', e=>{
+      if(!gameRunning) return; e.preventDefault();
+      const rect=gCanvas.getBoundingClientRect();
+      const t=e.touches[0];
+      mouseX=t.clientX-rect.left; mouseY=t.clientY-rect.top;
+      if(ship){ ship.angle=Math.atan2(mouseY-ship.y, mouseX-ship.x)+Math.PI/2; }
+      tryShoot();
+    },{passive:false});
+    gCanvas.addEventListener('touchstart', e=>{
+      if(!gameRunning) return; e.preventDefault();
+      const rect=gCanvas.getBoundingClientRect();
+      mouseX=e.touches[0].clientX-rect.left; mouseY=e.touches[0].clientY-rect.top;
+      tryShoot();
+    },{passive:false});
+  }
+
+  function resizeGame(){
+    if(!gCanvas) return;
+    const parent=gCanvas.parentElement;
+    gCanvas.width=parent.clientWidth;
+    gCanvas.height=parent.clientHeight-46;
+    gW=gCanvas.width; gH=gCanvas.height;
+    if(ship){ ship.x=Math.min(ship.x,gW-20); ship.y=Math.min(ship.y,gH-20); }
+    makeGameStars();
+  }
+
+  function makeGameStars(){
+    stars=[];
+    const n=Math.floor(gW*gH/3500);
+    for(let i=0;i<n;i++) stars.push({
+      x:Math.random()*gW, y:Math.random()*gH,
+      r:Math.random()*1.4+0.2, a:Math.random(), da:(Math.random()-.5)*0.01,
+      speed:Math.random()*0.4+0.1
+    });
+  }
+
+  // ── Start ──
+  window.startGame=function(){
+    score=0; lives=3; wave=1; gameOver=false;
+    totalKills=0; totalShots=0; maxCombo=0;
+    bullets=[]; meteors=[]; particles=[]; pickups=[]; enemyBullets=[];
+    shootCooldown=0; invincible=0; waveClearing=false;
+    combo=1; comboTimer=0; puShield=0; puRapid=0; puBomb=0; screenShake=0;
+    ship={x:gW/2, y:gH*0.72, r:16, angle:-Math.PI/2, vx:0, vy:0, thrustFx:0};
+    mouseX=gW/2; mouseY=gH*0.3;
+    updateHUD();
+    document.getElementById('game-start-screen').style.display='none';
+    document.getElementById('game-over-screen').style.display='none';
+    document.getElementById('game-wave-screen').style.display='none';
+    spawnWave(1);
+    gameRunning=true;
+    if(gameRAF) cancelAnimationFrame(gameRAF);
+    lastTime=performance.now();
+    gameRAF=requestAnimationFrame(gameLoop);
+    showWaveBanner('ХВИЛЯ 1','ПОЧИНАЙ!');
+  };
+
+  // ── Wave difficulty config ──
+  function waveConfig(w){
+    return {
+      count: 3+w*2+Math.floor(w/3),
+      hasShooters: w>=3,
+      hasArmored: w>=4,
+      hasFast: w>=2,
+      shooterChance: Math.min(0.35, w*0.05),
+      armoredChance: Math.min(0.3, (w-3)*0.06),
+      fastChance: Math.min(0.3, (w-1)*0.05),
+      meteorSpeed: 0.55+w*0.09,
+      shootFreq: Math.max(80, 200-w*12),
+    };
+  }
+
+  function spawnWave(w){
+    meteors=[]; enemyBullets=[];
+    const cfg=waveConfig(w);
+    for(let i=0;i<cfg.count;i++) spawnMeteor(w,cfg);
+  }
+
+  function spawnMeteor(w, cfg, x, y, size){
+    const r=Math.random();
+    let type='normal';
+    if(cfg&&cfg.hasShooters&&Math.random()<cfg.shooterChance) type='shooter';
+    else if(cfg&&cfg.hasArmored&&Math.random()<cfg.armoredChance) type='armored';
+    else if(cfg&&cfg.hasFast&&Math.random()<cfg.fastChance) type='fast';
+
+    const sz = size||(Math.random()<0.3?'large':Math.random()<0.55?'medium':'small');
+    const radii={large:40+Math.random()*14, medium:23+Math.random()*9, small:12+Math.random()*5};
+    const mr=radii[sz];
+
+    let mx,my;
+    if(x!==undefined){ mx=x; my=y; }
+    else {
+      // Spawn from edges or top
+      const edge=Math.floor(Math.random()*4);
+      if(edge===0){mx=Math.random()*gW; my=-mr;}
+      else if(edge===1){mx=gW+mr; my=Math.random()*gH*0.7;}
+      else if(edge===2){mx=-mr; my=Math.random()*gH*0.7;}
+      else{mx=Math.random()*gW; my=-mr-Math.random()*80;}
+    }
+
+    const baseSpeed=(cfg?cfg.meteorSpeed:0.8)*(type==='fast'?2.2:1)*(sz==='small'?1.4:sz==='medium'?1:0.7);
+    // Aim roughly toward middle/ship area
+    const targetX=gW/2+(Math.random()-.5)*gW*0.5;
+    const targetY=gH*0.5+(Math.random()-.5)*gH*0.3;
+    const ang=Math.atan2(targetY-my, targetX-mx);
+    const speed=baseSpeed*(0.7+Math.random()*0.6);
+
+    const sides=7+Math.floor(Math.random()*5);
+    const jagged=Array.from({length:sides},(_,i)=>{
+      const a=(i/sides)*Math.PI*2;
+      const d=mr*(0.72+Math.random()*0.36);
+      return{a,d};
+    });
+
+    const cols={normal:['#8B4513','#A0522D','#CD853F','#7a4030','#9c6644'],
+                shooter:['#c0392b','#e74c3c','#922b21'],
+                armored:['#6c3483','#9b59b6','#512e5f'],
+                fast:['#1a5276','#2980b9','#154360']};
+    const col=(cols[type]||cols.normal)[Math.floor(Math.random()*(cols[type]||cols.normal).length)];
+
+    const baseHp={large:3,medium:2,small:1};
+    const hpMult={normal:1,shooter:1,armored:3,fast:1};
+    const hp=(baseHp[sz]||1)*(hpMult[type]||1)+(w>5?1:0);
+
+    meteors.push({
+      x:mx,y:my, vx:Math.cos(ang)*speed, vy:Math.sin(ang)*speed,
+      r:mr, sz, col, type, jagged, rot:0, rotSpeed:(Math.random()-.5)*0.025,
+      hp, maxHp:hp, shootTimer:40+Math.floor(Math.random()*60),
+      age:0, glowPulse:Math.random()*Math.PI*2
+    });
+  }
+
+  // ── Shoot ──
+  function tryShoot(){
+    const cd = puRapid>0 ? 4 : 14;
+    if(shootCooldown>0) return;
+    shootCooldown=cd;
+    totalShots++;
+    const bx=ship.x+Math.cos(ship.angle-Math.PI/2)*ship.r;
+    const by=ship.y+Math.sin(ship.angle-Math.PI/2)*ship.r;
+    const spd=14;
+    bullets.push({x:bx,y:by,vx:Math.cos(ship.angle-Math.PI/2)*spd,vy:Math.sin(ship.angle-Math.PI/2)*spd,life:60,trail:[]});
+    // Spread shot if rapid fire
+    if(puRapid>0){
+      for(const off of[-0.18,0.18]){
+        const a=ship.angle-Math.PI/2+off;
+        bullets.push({x:bx,y:by,vx:Math.cos(a)*spd*0.85,vy:Math.sin(a)*spd*0.85,life:50,trail:[]});
+      }
+    }
+    for(let i=0;i<5;i++) particles.push(mkP(bx,by,'#fff',1.8,3));
+  }
+
+  // ── Bomb ──
+  function activateBomb(){
+    if(puBomb<=0) return;
+    puBomb=0;
+    screenShake=20;
+    // Explode all visible meteors
+    for(const m of meteors){
+      explodeMeteor(m);
+      score+=m.sz==='large'?15:m.sz==='medium'?35:80;
+      totalKills++;
+    }
+    meteors=[]; enemyBullets=[];
+    // Shockwave
+    for(let i=0;i<60;i++) particles.push(mkP(gW/2,gH/2,Math.random()<0.5?'#00d2ff':'#fff',12,25));
+    updateHUD();
+    showFloatText(gW/2,gH/2,'💥 БОМБА!','#f97316',32);
+  }
+
+  // ── Particle helper ──
+  function mkP(x,y,col,speed,life,vxe=0,vye=0){
+    const a=Math.random()*Math.PI*2;
+    const s=speed*(0.4+Math.random()*0.8);
+    return{x,y,vx:Math.cos(a)*s+vxe,vy:Math.sin(a)*s+vye,col,life,maxLife:life,r:Math.random()*2.8+0.6};
+  }
+
+  // ── Float text ──
+  let floatTexts=[];
+  function showFloatText(x,y,text,col,size=18){
+    floatTexts.push({x,y,text,col,size,life:50,maxLife:50,vy:-1.2});
+  }
+
+  // ── Explosions ──
+  function explodeMeteor(m){
+    const n=m.sz==='large'?20:m.sz==='medium'?12:7;
+    const baseCol=m.type==='shooter'?'#e74c3c':m.type==='armored'?'#9b59b6':m.type==='fast'?'#2980b9':m.col;
+    for(let i=0;i<n;i++) particles.push(mkP(m.x,m.y,Math.random()<0.5?baseCol:'#ffaa44',3+Math.random()*3,25+Math.random()*20));
+    for(let i=0;i<7;i++) particles.push(mkP(m.x,m.y,'#fff',6,10));
+    screenShake=Math.max(screenShake, m.sz==='large'?8:m.sz==='medium'?4:2);
+  }
+  function explodeShip(){
+    for(let i=0;i<35;i++) particles.push(mkP(ship.x,ship.y,Math.random()<0.5?'#00d2ff':'#fff',5+Math.random()*3,40+Math.random()*20));
+    for(let i=0;i<12;i++) particles.push(mkP(ship.x,ship.y,'#f97316',3,22));
+    screenShake=20;
+  }
+
+  // ── Pickups ──
+  function spawnPickup(x,y){
+    if(Math.random()>0.35) return;
+    const types=['shield','rapid','bomb','life','score'];
+    const weights=[25,30,15,10,20];
+    let roll=Math.random()*100, cum=0, t='score';
+    for(let i=0;i<types.length;i++){ cum+=weights[i]; if(roll<cum){t=types[i];break;} }
+    pickups.push({x,y,type:t,vy:-0.5,vx:(Math.random()-.5)*0.8,life:320,r:13,pulse:Math.random()*Math.PI*2});
+  }
+
+  // ── Main loop ──
+  function gameLoop(now){
+    const dt=Math.min((now-lastTime)/16.67, 2.5);
+    lastTime=now;
+    update(dt);
+    draw();
+    if(gameRunning) gameRAF=requestAnimationFrame(gameLoop);
+  }
+
+  function update(dt){
+    if(gameOver) return;
+    bgScrollY=(bgScrollY+0.3*dt)%gH;
+    if(screenShake>0) screenShake=Math.max(0,screenShake-dt*1.2);
+    if(shootCooldown>0) shootCooldown-=dt;
+    if(invincible>0) invincible-=dt;
+    if(puShield>0){ puShield-=dt; if(puShield<=0){ puShield=0; updatePUDisplay(); } }
+    if(puRapid>0){ puRapid-=dt; if(puRapid<=0){ puRapid=0; updatePUDisplay(); } }
+    if(comboTimer>0){ comboTimer-=dt; if(comboTimer<=0){ combo=1; updateComboHUD(); } }
+
+    // WASD ship movement
+    const spd=3.5;
+    const acc=0.22;
+    if(keys['KeyW']||keys['ArrowUp'])    ship.vy-=acc*dt;
+    if(keys['KeyS']||keys['ArrowDown'])  ship.vy+=acc*dt;
+    if(keys['KeyA']||keys['ArrowLeft'])  ship.vx-=acc*dt;
+    if(keys['KeyD']||keys['ArrowRight']) ship.vx+=acc*dt;
+    // Friction
+    ship.vx*=Math.pow(0.88,dt); ship.vy*=Math.pow(0.88,dt);
+    // Max speed
+    const spd2=Math.hypot(ship.vx,ship.vy);
+    if(spd2>spd){ ship.vx=(ship.vx/spd2)*spd; ship.vy=(ship.vy/spd2)*spd; }
+    ship.x+=ship.vx*dt; ship.y+=ship.vy*dt;
+    // Wrap
+    if(ship.x<-ship.r)ship.x=gW+ship.r; else if(ship.x>gW+ship.r)ship.x=-ship.r;
+    if(ship.y<-ship.r)ship.y=gH+ship.r; else if(ship.y>gH+ship.r)ship.y=-ship.r;
+    // Angle toward mouse
+    ship.angle=Math.atan2(mouseY-ship.y, mouseX-ship.x)+Math.PI/2;
+    ship.thrustFx=spd2>0.3?1:0;
+
+    // Bullets
+    for(let i=bullets.length-1;i>=0;i--){
+      const b=bullets[i];
+      b.trail.push({x:b.x,y:b.y});
+      if(b.trail.length>9) b.trail.shift();
+      b.x+=b.vx*dt; b.y+=b.vy*dt; b.life-=dt;
+      if(b.x<-10||b.x>gW+10||b.y<-10||b.y>gH+10||b.life<=0){ bullets.splice(i,1); }
+    }
+
+    // Enemy bullets
+    for(let i=enemyBullets.length-1;i>=0;i--){
+      const b=enemyBullets[i];
+      b.x+=b.vx*dt; b.y+=b.vy*dt; b.life-=dt;
+      if(b.x<-20||b.x>gW+20||b.y<-20||b.y>gH+20||b.life<=0){ enemyBullets.splice(i,1); continue; }
+      // Hit ship
+      if(invincible<=0&&puShield<=0&&Math.hypot(b.x-ship.x,b.y-ship.y)<ship.r+5){
+        enemyBullets.splice(i,1);
+        takeDamage();
+      }
+    }
+
+    // Pickups
+    for(let i=pickups.length-1;i>=0;i--){
+      const p=pickups[i];
+      p.x+=p.vx*dt; p.y+=p.vy*dt; p.life-=dt; p.pulse+=0.07*dt;
+      if(p.life<=0||p.y>gH+20){ pickups.splice(i,1); continue; }
+      // Ship collect
+      if(Math.hypot(p.x-ship.x,p.y-ship.y)<ship.r+p.r+4){
+        collectPickup(p);
+        pickups.splice(i,1);
+      }
+    }
+
+    // Meteors
+    for(let i=meteors.length-1;i>=0;i--){
+      const m=meteors[i];
+      m.x+=m.vx*dt; m.y+=m.vy*dt; m.rot+=m.rotSpeed*dt; m.age+=dt; m.glowPulse+=0.05*dt;
+      // Wrap
+      if(m.x<-m.r-10)m.x=gW+m.r; else if(m.x>gW+m.r+10)m.x=-m.r;
+      if(m.y<-m.r-10)m.y=gH+m.r; else if(m.y>gH+m.r+10)m.y=-m.r;
+
+      // Shooter fires at ship
+      if(m.type==='shooter'){
+        m.shootTimer-=dt;
+        if(m.shootTimer<=0){
+          m.shootTimer=waveConfig(wave).shootFreq*(0.7+Math.random()*0.6);
+          const a2=Math.atan2(ship.y-m.y,ship.x-m.x);
+          const espd=3.5+wave*0.15;
+          enemyBullets.push({x:m.x,y:m.y,vx:Math.cos(a2)*espd,vy:Math.sin(a2)*espd,life:120,r:5,col:'#e74c3c'});
+        }
+      }
+
+      // Bullet collision
+      let destroyed=false;
+      for(let j=bullets.length-1;j>=0;j--){
+        const b=bullets[j];
+        if(Math.hypot(b.x-m.x,b.y-m.y)<m.r){
+          bullets.splice(j,1);
+          m.hp--;
+          for(let k=0;k<6;k++) particles.push(mkP(b.x,b.y,'#ffdd88',4,12));
+          if(m.hp<=0){
+            explodeMeteor(m);
+            // Combo
+            combo++; comboTimer=90;
+            if(combo>maxCombo) maxCombo=combo;
+            updateComboHUD();
+            const mult=Math.min(combo,8);
+            const base=m.sz==='large'?20:m.sz==='medium'?50:100;
+            const pts=base*(m.type==='armored'?3:m.type==='shooter'?2:1)*mult;
+            score+=pts;
+            totalKills++;
+            showFloatText(m.x,m.y-m.r,`+${pts}`,combo>3?'#ffd700':'#fff', combo>5?22:16);
+            // Split
+            if(m.sz==='large'){ spawnMeteor(wave,waveConfig(wave),m.x,m.y,'medium'); spawnMeteor(wave,waveConfig(wave),m.x,m.y,'medium'); }
+            else if(m.sz==='medium'){ spawnMeteor(wave,waveConfig(wave),m.x,m.y,'small'); spawnMeteor(wave,waveConfig(wave),m.x,m.y,'small'); }
+            spawnPickup(m.x,m.y);
+            meteors.splice(i,1);
+            destroyed=true;
+            updateHUD();
+            break;
+          } else {
+            // Hit flash
+            showFloatText(m.x,m.y,'HIT!','#fff',13);
+          }
+          break;
+        }
+      }
+      if(destroyed) continue;
+
+      // Meteor hits ship
+      if(invincible<=0&&Math.hypot(ship.x-m.x,ship.y-m.y)<ship.r+m.r-6){
+        if(puShield>0){ // Shield absorbs
+          puShield=0; invincible=60; screenShake=10;
+          showFloatText(ship.x,ship.y-30,'ЩИТБОКУ!','#00d2ff',16);
+          for(let k=0;k<15;k++) particles.push(mkP(ship.x,ship.y,'#00d2ff',5,15));
+          updatePUDisplay();
+        } else {
+          takeDamage();
+          // Push meteor back
+          const ang2=Math.atan2(m.y-ship.y,m.x-ship.x);
+          m.vx+=Math.cos(ang2)*3; m.vy+=Math.sin(ang2)*3;
+        }
+      }
+    }
+
+    // Particles
+    for(let i=particles.length-1;i>=0;i--){
+      const p=particles[i];
+      p.x+=p.vx*dt; p.y+=p.vy*dt; p.vx*=Math.pow(0.94,dt); p.vy*=Math.pow(0.94,dt);
+      p.life-=dt; if(p.life<=0) particles.splice(i,1);
+    }
+
+    // Float texts
+    for(let i=floatTexts.length-1;i>=0;i--){
+      const t=floatTexts[i];
+      t.y+=t.vy*dt; t.life-=dt; if(t.life<=0) floatTexts.splice(i,1);
+    }
+
+    // Stars
+    for(const s of stars){ s.a+=s.da*dt; if(s.a<0.05||s.a>1)s.da*=-1; }
+
+    // Next wave
+    if(!waveClearing&&meteors.length===0&&pickups.length===0&&enemyBullets.length===0){
+      waveClearing=true; wave++;
+      const cfg=waveConfig(wave);
+      const subLines=['НЕБЕЗПЕКА ЗРОСТАЄ!','ВОНИ СТРІЛЯЮТЬ!','БРОНЬОВАНІ АСТЕРОЇДИ!','ХАОС ПОЧИНАЄТЬСЯ!','БОГ РЕЖИМ...'];
+      const sub=wave>=3?subLines[Math.min(wave-3,subLines.length-1)]:'';
+      updateHUD();
+      showWaveBanner(`ХВИЛЯ ${wave}`, sub);
+      setTimeout(()=>{ spawnWave(wave); waveClearing=false; }, 2400);
+    }
+  }
+
+  function takeDamage(){
+    lives--; invincible=130; combo=1; comboTimer=0;
+    explodeShip(); updateHUD(); updateComboHUD();
+    if(lives<=0){ endGame(); }
+  }
+
+  function collectPickup(p){
+    const msgs={shield:'🛡️ ЩИТ!',rapid:'⚡ ШВИДКИЙ ВОГОНЬ!',bomb:'💣 БОМБА ГОТОВА!',life:'❤️ +LIFE!',score:'💫 БОНУС ОЧКИ!'};
+    showToast(msgs[p.type]||'Бонус','⭐');
+    if(p.type==='shield'){ puShield=300; }
+    else if(p.type==='rapid'){ puRapid=200; }
+    else if(p.type==='bomb'){ puBomb=1; }
+    else if(p.type==='life'&&lives<5){ lives++; updateHUD(); }
+    else if(p.type==='score'){ score+=500*combo; showFloatText(p.x,p.y-20,'★ +500!','#ffd700',20); updateHUD(); }
+    updatePUDisplay();
+  }
+
+  // ── Drawing ──
+  function draw(){
+    const c=gCtx;
+    // Screen shake
+    c.save();
+    if(screenShake>0){
+      c.translate((Math.random()-.5)*screenShake*0.8,(Math.random()-.5)*screenShake*0.8);
+    }
+    c.clearRect(-50,-50,gW+100,gH+100);
+
+    // Deep space BG with scroll
+    const grad=c.createLinearGradient(0,0,0,gH);
+    grad.addColorStop(0,'#020610'); grad.addColorStop(0.5,'#040a18'); grad.addColorStop(1,'#020408');
+    c.fillStyle=grad; c.fillRect(-50,-50,gW+100,gH+100);
+
+    // Scrolling star layers (parallax)
+    for(const s of stars){
+      s.y=(s.y+s.speed*(gameRunning?1:0))%gH;
+      if(s.y<0)s.y=gH;
+      c.beginPath(); c.arc(s.x,s.y,s.r,0,Math.PI*2);
+      c.fillStyle=`rgba(200,225,255,${s.a.toFixed(2)})`; c.fill();
+    }
+
+    // Nebula
+    drawNebula(c);
+
+    // Pickups
+    for(const p of pickups) drawPickup(c,p);
+
+    // Particles
+    for(const p of particles){
+      const alpha=(p.life/p.maxLife);
+      c.globalAlpha=Math.max(0,alpha);
+      c.beginPath(); c.arc(p.x,p.y,p.r*alpha,0,Math.PI*2);
+      c.fillStyle=p.col; c.fill();
+    }
+    c.globalAlpha=1;
+
+    // Enemy bullets
+    for(const b of enemyBullets){
+      const bg2=c.createRadialGradient(b.x,b.y,0,b.x,b.y,10);
+      bg2.addColorStop(0,'rgba(231,76,60,0.95)'); bg2.addColorStop(1,'rgba(231,76,60,0)');
+      c.beginPath(); c.arc(b.x,b.y,10,0,Math.PI*2); c.fillStyle=bg2; c.fill();
+      c.beginPath(); c.arc(b.x,b.y,4,0,Math.PI*2); c.fillStyle='#ff9999'; c.fill();
+    }
+
+    // Player bullets
+    for(const b of bullets){
+      for(let i=0;i<b.trail.length;i++){
+        const t=b.trail[i]; const a=(i/b.trail.length)*0.6;
+        c.beginPath(); c.arc(t.x,t.y,2,0,Math.PI*2);
+        c.fillStyle=`rgba(0,210,255,${a.toFixed(2)})`; c.fill();
+      }
+      const bg3=c.createRadialGradient(b.x,b.y,0,b.x,b.y,9);
+      bg3.addColorStop(0,'rgba(0,230,255,0.95)'); bg3.addColorStop(1,'rgba(0,210,255,0)');
+      c.beginPath(); c.arc(b.x,b.y,9,0,Math.PI*2); c.fillStyle=bg3; c.fill();
+      c.beginPath(); c.arc(b.x,b.y,3.5,0,Math.PI*2); c.fillStyle='#fff'; c.fill();
+    }
+
+    // Meteors
+    for(const m of meteors) drawMeteor(c,m);
+
+    // Shield bubble
+    if(puShield>0){
+      const a2=Math.min(1,(puShield/300))*0.4+0.1;
+      const sg=c.createRadialGradient(ship.x,ship.y,ship.r,ship.x,ship.y,ship.r+14);
+      sg.addColorStop(0,`rgba(0,210,255,${a2})`); sg.addColorStop(1,'rgba(0,210,255,0)');
+      c.beginPath(); c.arc(ship.x,ship.y,ship.r+14,0,Math.PI*2); c.fillStyle=sg; c.fill();
+      c.beginPath(); c.arc(ship.x,ship.y,ship.r+12,0,Math.PI*2);
+      c.strokeStyle=`rgba(0,210,255,${a2*2})`; c.lineWidth=2; c.stroke();
+    }
+
+    // Ship
+    if(invincible<=0||Math.floor(invincible/5)%2===0) drawShip(c);
+
+    // Float texts
+    for(const t of floatTexts){
+      const a2=t.life/t.maxLife;
+      c.globalAlpha=Math.max(0,a2);
+      c.font=`bold ${t.size}px var(--font-display, sans-serif)`;
+      c.fillStyle=t.col; c.textAlign='center'; c.textBaseline='middle';
+      c.shadowColor=t.col; c.shadowBlur=8;
+      c.fillText(t.text,t.x,t.y);
+      c.shadowBlur=0;
+    }
+    c.globalAlpha=1; c.textAlign='left'; c.textBaseline='alphabetic';
+
+    c.restore(); // end screen shake
+  }
+
+  function drawNebula(c){
+    const n1=c.createRadialGradient(gW*0.12,gH*0.18,0,gW*0.12,gH*0.18,gW*0.28);
+    n1.addColorStop(0,'rgba(168,85,247,0.05)'); n1.addColorStop(1,'rgba(168,85,247,0)');
+    c.fillStyle=n1; c.fillRect(0,0,gW,gH);
+    const n2=c.createRadialGradient(gW*0.82,gH*0.65,0,gW*0.82,gH*0.65,gW*0.22);
+    n2.addColorStop(0,'rgba(0,210,255,0.04)'); n2.addColorStop(1,'rgba(0,210,255,0)');
+    c.fillStyle=n2; c.fillRect(0,0,gW,gH);
+  }
+
+  function drawPickup(c,p){
+    const a2=Math.min(1,p.life/60)*0.9;
+    const pulse=Math.sin(p.pulse)*0.3+0.7;
+    const icons={shield:'🛡️',rapid:'⚡',bomb:'💣',life:'❤️',score:'★'};
+    const colors={shield:'#00d2ff',rapid:'#ffd700',bomb:'#f97316',life:'#f43f5e',score:'#a855f7'};
+    const col=colors[p.type]||'#fff';
+    // Glow ring
+    c.save();
+    c.globalAlpha=a2*pulse;
+    const pg=c.createRadialGradient(p.x,p.y,2,p.x,p.y,p.r+8);
+    pg.addColorStop(0,col+'99'); pg.addColorStop(1,col+'00');
+    c.beginPath(); c.arc(p.x,p.y,p.r+8,0,Math.PI*2); c.fillStyle=pg; c.fill();
+    c.beginPath(); c.arc(p.x,p.y,p.r,0,Math.PI*2);
+    c.strokeStyle=col; c.lineWidth=2; c.stroke();
+    c.font=`${p.r*1.3}px sans-serif`; c.textAlign='center'; c.textBaseline='middle';
+    c.fillText(icons[p.type]||'?',p.x,p.y);
+    c.restore();
+  }
+
+  function drawMeteor(c,m){
+    c.save(); c.translate(m.x,m.y); c.rotate(m.rot);
+    const pulse=Math.sin(m.glowPulse)*0.5+0.5;
+    const typeGlows={shooter:'rgba(231,76,60,',armored:'rgba(155,89,182,',fast:'rgba(41,128,185,',normal:'rgba(200,120,60,'};
+    const glowBase=typeGlows[m.type]||typeGlows.normal;
+
+    // Outer glow
+    const glow=c.createRadialGradient(0,0,m.r*0.3,0,0,m.r*1.6);
+    glow.addColorStop(0,glowBase+(0.1+pulse*0.1)+')'); glow.addColorStop(1,glowBase+'0)');
+    c.beginPath();
+    for(let i=0;i<m.jagged.length;i++){
+      const pt=m.jagged[i];
+      const nx=Math.cos(pt.a)*m.r*1.6, ny=Math.sin(pt.a)*m.r*1.6;
+      i===0?c.moveTo(nx,ny):c.lineTo(nx,ny);
+    }
+    c.closePath(); c.fillStyle=glow; c.fill();
+
+    // Body
+    c.beginPath();
+    for(let i=0;i<m.jagged.length;i++){
+      const pt=m.jagged[i];
+      const nx=Math.cos(pt.a)*pt.d, ny=Math.sin(pt.a)*pt.d;
+      i===0?c.moveTo(nx,ny):c.lineTo(nx,ny);
+    }
+    c.closePath();
+    const rg=c.createRadialGradient(-m.r*0.25,-m.r*0.3,m.r*0.08,0,0,m.r);
+    if(m.type==='armored'){
+      rg.addColorStop(0,'#d7bde2'); rg.addColorStop(0.4,m.col); rg.addColorStop(1,'#1a0a2a');
+    } else if(m.type==='shooter'){
+      rg.addColorStop(0,'#f1948a'); rg.addColorStop(0.4,m.col); rg.addColorStop(1,'#280a0a');
+    } else if(m.type==='fast'){
+      rg.addColorStop(0,'#85c1e9'); rg.addColorStop(0.4,m.col); rg.addColorStop(1,'#0a1620');
+    } else {
+      rg.addColorStop(0,'#c8956a'); rg.addColorStop(0.4,m.col); rg.addColorStop(1,'#2a1408');
+    }
+    c.fillStyle=rg; c.fill();
+    c.strokeStyle='rgba(0,0,0,0.5)'; c.lineWidth=1.5; c.stroke();
+
+    // Armored plating overlay
+    if(m.type==='armored'){
+      for(let i=0;i<4;i++){
+        const pa=i*Math.PI/2+m.rot*0.3;
+        const px2=Math.cos(pa)*m.r*0.5, py2=Math.sin(pa)*m.r*0.5;
+        c.beginPath(); c.arc(px2,py2,m.r*0.22,0,Math.PI*2);
+        c.strokeStyle='rgba(200,150,255,0.4)'; c.lineWidth=2; c.stroke();
+      }
+    }
+    // Shooter danger glow
+    if(m.type==='shooter'){
+      c.beginPath(); c.arc(0,0,m.r*0.35,0,Math.PI*2);
+      c.fillStyle=`rgba(231,76,60,${0.3+pulse*0.3})`; c.fill();
+    }
+    // Fast speed lines
+    if(m.type==='fast'){
+      c.strokeStyle='rgba(41,128,185,0.5)'; c.lineWidth=1.5;
+      for(let i=0;i<3;i++){
+        const a3=i*Math.PI*2/3;
+        c.beginPath(); c.moveTo(Math.cos(a3)*m.r,Math.sin(a3)*m.r);
+        c.lineTo(Math.cos(a3)*m.r*1.8,Math.sin(a3)*m.r*1.8); c.stroke();
+      }
+    }
+
+    // Craters
+    const cc=m.sz==='large'?4:m.sz==='medium'?2:1;
+    for(let i=0;i<cc;i++){
+      const cx2=Math.cos(i*1.8)*m.r*0.35, cy2=Math.sin(i*2.1+0.5)*m.r*0.35;
+      const cr=m.r*(0.09+i*0.035);
+      c.beginPath(); c.arc(cx2,cy2,cr,0,Math.PI*2); c.fillStyle='rgba(0,0,0,0.32)'; c.fill();
+      c.beginPath(); c.arc(cx2-cr*0.3,cy2-cr*0.3,cr*0.4,0,Math.PI*2); c.fillStyle='rgba(255,255,255,0.1)'; c.fill();
+    }
+    c.beginPath(); c.arc(-m.r*0.22,-m.r*0.28,m.r*0.26,0,Math.PI*2); c.fillStyle='rgba(255,255,255,0.07)'; c.fill();
+
+    // HP bar
+    if(m.hp>1||m.maxHp>1){
+      const bw=m.r*2; const bh=4;
+      const bx2=-m.r; const by2=-m.r-10;
+      c.fillStyle='rgba(0,0,0,0.5)'; c.fillRect(bx2,by2,bw,bh);
+      const hpCol=m.type==='armored'?'#9b59b6':m.type==='shooter'?'#e74c3c':'#22c55e';
+      c.fillStyle=hpCol; c.fillRect(bx2,by2,bw*(m.hp/m.maxHp),bh);
+    }
+    c.restore();
+  }
+
+  function drawShip(c){
+    c.save(); c.translate(ship.x,ship.y); c.rotate(ship.angle);
+    const moving=ship.thrustFx>0;
+
+    // Engine glow
+    if(moving){
+      const eg=c.createRadialGradient(0,18,0,0,18,26);
+      eg.addColorStop(0,'rgba(0,200,255,0.6)'); eg.addColorStop(1,'rgba(0,200,255,0)');
+      c.beginPath(); c.arc(0,18,26,0,Math.PI*2); c.fillStyle=eg; c.fill();
+    }
+
+    // ── Among-Us crewmate body ──
+    const bodyColor=puRapid>0?'#f39c12':puShield>0?'#2980b9':'#c8312a';
+    const shadowColor=puRapid>0?'#9a6000':puShield>0?'#1a5276':'#7a1a14';
+    const backpackColor=puRapid>0?'#d68910':puShield>0?'#21618c':'#a02824';
+
+    c.beginPath(); c.ellipse(9,4,7,9,0,0,Math.PI*2); c.fillStyle=backpackColor; c.fill();
+    c.beginPath();
+    c.moveTo(-10,-14); c.quadraticCurveTo(-14,-14,-14,-8); c.lineTo(-14,8);
+    c.quadraticCurveTo(-14,16,-8,16); c.lineTo(8,16);
+    c.quadraticCurveTo(14,16,14,8); c.lineTo(14,-2);
+    c.quadraticCurveTo(14,-14,4,-14); c.closePath();
+    c.fillStyle=bodyColor; c.fill();
+    c.beginPath();
+    c.moveTo(6,-14); c.lineTo(14,-2); c.quadraticCurveTo(14,8,8,14); c.lineTo(6,14);
+    c.quadraticCurveTo(10,4,10,-8); c.closePath();
+    c.fillStyle=shadowColor; c.fill();
+
+    // Visor
+    c.beginPath(); c.ellipse(-2,-8,9,6,0.15,0,Math.PI*2); c.fillStyle='#7de8ff'; c.fill();
+    c.beginPath(); c.ellipse(-5,-10,4,2.5,-0.3,0,Math.PI*2); c.fillStyle='rgba(255,255,255,0.45)'; c.fill();
+
+    // Legs
+    c.fillStyle=bodyColor;
+    c.beginPath(); c.roundRect(-9,12,7,9,3); c.fill();
+    c.beginPath(); c.roundRect(2,12,7,9,3); c.fill();
+    c.fillStyle=shadowColor;
+    c.beginPath(); c.roundRect(-1,12,3,9,2); c.fill();
+
+    // Flame
+    const flameH=(moving?18:9)+Math.random()*6;
+    const fg=c.createLinearGradient(0,18,0,18+flameH);
+    fg.addColorStop(0,puRapid>0?'rgba(255,200,0,0.95)':'rgba(0,220,255,0.95)');
+    fg.addColorStop(0.5,puRapid>0?'rgba(255,100,0,0.6)':'rgba(100,180,255,0.6)');
+    fg.addColorStop(1,'rgba(0,0,0,0)');
+    c.beginPath(); c.moveTo(-5,18); c.quadraticCurveTo(0,18+flameH+5,5,18); c.fillStyle=fg; c.fill();
+
+    // Aim line
+    c.setLineDash([4,10]); c.lineWidth=1;
+    c.strokeStyle='rgba(0,210,255,0.2)';
+    c.beginPath(); c.moveTo(0,-ship.r-4); c.lineTo(0,-Math.max(gW,gH)); c.stroke();
+    c.setLineDash([]);
+    c.restore();
+  }
+
+  function updateHUD(){
+    document.getElementById('game-score-val').textContent=score;
+    if(score>hiScore){ hiScore=score; localStorage.setItem('cosmo_game_hi',hiScore); }
+    document.getElementById('game-hiscore-val').textContent=hiScore;
+    document.getElementById('game-wave-val').textContent=wave;
+    const ld=document.getElementById('game-lives-display');
+    ld.innerHTML='';
+    for(let i=0;i<lives;i++) ld.innerHTML+='<span style="font-size:18px;">🚀</span>';
+    for(let i=lives;i<5;i++) ld.innerHTML+='<span style="font-size:18px;opacity:0.15;">🚀</span>';
+  }
+
+  function updateComboHUD(){
+    const cd=document.getElementById('game-combo-display');
+    const cv=document.getElementById('game-combo-val');
+    if(combo>1){ cd.style.display=''; cv.textContent=`x${combo}`; }
+    else { cd.style.display='none'; }
+  }
+
+  function updatePUDisplay(){
+    const sEl=document.getElementById('pu-shield'); const rEl=document.getElementById('pu-rapid'); const bEl=document.getElementById('pu-bomb');
+    sEl.classList.toggle('active',puShield>0);
+    rEl.classList.toggle('active',puRapid>0);
+    bEl.classList.toggle('active',puBomb>0);
+  }
+
+  function showWaveBanner(text,sub=''){
+    const ws=document.getElementById('game-wave-screen');
+    const wt=document.getElementById('game-wave-text');
+    const wsub=document.getElementById('game-wave-sub');
+    ws.style.display='flex';
+    wt.textContent=text; wt.style.opacity='1';
+    wsub.textContent=sub; wsub.style.opacity=sub?'1':'0';
+    setTimeout(()=>{ wt.style.opacity='0'; wsub.style.opacity='0'; setTimeout(()=>ws.style.display='none',350); }, 2000);
+  }
+
+  function endGame(){
+    gameRunning=false; gameOver=true;
+    const xpEarned=Math.floor(score/8)+wave*8+maxCombo*3;
+    const acc=totalShots>0?Math.round(totalKills/totalShots*100):0;
+    setTimeout(()=>{
+      document.getElementById('game-over-screen').style.display='flex';
+      document.getElementById('game-over-score').textContent=score;
+      document.getElementById('game-over-hiscore').textContent=hiScore;
+      document.getElementById('game-over-stats').innerHTML=
+        `Хвиля досягнута: ${wave} &nbsp;|&nbsp; Знищено: ${totalKills} &nbsp;|&nbsp; Макс. комбо: x${maxCombo}<br>Точність: ${acc}%`;
+      document.getElementById('game-over-xp').textContent=`+${xpEarned} XP зароблено!`;
+      if(typeof addXP==='function') addXP(xpEarned,'Метеоритна Атака');
+    }, 900);
+  }
+
+  hiScore=parseInt(localStorage.getItem('cosmo_game_hi'))||0;
+})();
+</script>
+</body>
+</html>
