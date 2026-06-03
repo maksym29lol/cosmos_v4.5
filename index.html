@@ -6,7 +6,60 @@
 <title>Cosmos v4.5 — Космічний Провідник</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Exo+2:ital,wght@0,100;0,300;0,400;0,600;0,800;1,300&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js">
+// ── MOBILE GAME CONTROLS ──
+function mDpad(code, down) {
+  window.dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', {code, bubbles:true}));
+  const map = {ArrowUp:'mbtn-up',ArrowDown:'mbtn-down',ArrowLeft:'mbtn-left',ArrowRight:'mbtn-right'};
+  const el = document.getElementById(map[code]);
+  if(el){ if(down) el.classList.add('pressed'); else el.classList.remove('pressed'); }
+}
+function mGameShoot(){
+  if(window._gameMobileTryShoot) window._gameMobileTryShoot();
+}
+function mGameBomb(){
+  if(window._gameMobileActivateBomb) window._gameMobileActivateBomb();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  // D-pad touch events
+  const dpadMap = {
+    'mbtn-up':'ArrowUp','mbtn-down':'ArrowDown',
+    'mbtn-left':'ArrowLeft','mbtn-right':'ArrowRight'
+  };
+  Object.entries(dpadMap).forEach(([id, code]) => {
+    const btn = document.getElementById(id);
+    if(!btn) return;
+    btn.addEventListener('touchstart', e => { e.preventDefault(); mDpad(code, true); }, {passive:false});
+    btn.addEventListener('touchend',   e => { e.preventDefault(); mDpad(code, false); }, {passive:false});
+    btn.addEventListener('touchcancel',e => { mDpad(code, false); });
+    btn.addEventListener('mousedown',  () => mDpad(code, true));
+    btn.addEventListener('mouseup',    () => mDpad(code, false));
+    btn.addEventListener('mouseleave', () => mDpad(code, false));
+  });
+
+  // Shoot: auto-fire while held
+  let _shootInterval = null;
+  const shootBtn = document.getElementById('mbtn-shoot');
+  if(shootBtn){
+    const startShoot = () => { mGameShoot(); _shootInterval = setInterval(mGameShoot, 110); };
+    const stopShoot  = () => { clearInterval(_shootInterval); };
+    shootBtn.addEventListener('touchstart', e => { e.preventDefault(); startShoot(); }, {passive:false});
+    shootBtn.addEventListener('touchend',   e => { e.preventDefault(); stopShoot(); }, {passive:false});
+    shootBtn.addEventListener('touchcancel', stopShoot);
+    shootBtn.addEventListener('mousedown',  startShoot);
+    shootBtn.addEventListener('mouseup',    stopShoot);
+    shootBtn.addEventListener('mouseleave', stopShoot);
+  }
+
+  // Bomb button
+  const bombBtn = document.getElementById('mbtn-bomb');
+  if(bombBtn){
+    bombBtn.addEventListener('touchstart', e => { e.preventDefault(); mGameBomb(); }, {passive:false});
+    bombBtn.addEventListener('mousedown',  () => mGameBomb());
+  }
+});
+</script>
 <style>
 /* ── BASE STYLES ── */
 *{margin:0;padding:0;box-sizing:border-box;scrollbar-width:thin;scrollbar-color:rgba(0,210,255,.2) transparent}
@@ -441,6 +494,62 @@ body::before{
 /* RESPONSIVE */
 @media(max-width:1100px){.layout{grid-template-columns:82px 1fr}.content-area{grid-template-columns:1fr}.objects-panel{display:none}}
 @media(max-width:800px){.layout{grid-template-columns:1fr;grid-template-rows:auto}.nav{display:none}.planet-hero{flex-direction:column;align-items:flex-start}.planet-orb{width:100px;height:100px}}
+
+/* ── MOBILE GAME CONTROLS ── */
+#mobile-game-controls{
+  display:none;
+  position:absolute;bottom:0;left:0;right:0;
+  height:160px;pointer-events:none;z-index:8;
+  padding:12px 18px;
+  align-items:flex-end;justify-content:space-between;
+}
+@media(max-width:900px){#mobile-game-controls{display:flex;}}
+@media screen and (hover:none) and (pointer:coarse){#mobile-game-controls{display:flex;}}
+.mgame-dpad{
+  display:grid;
+  grid-template-columns:56px 56px 56px;
+  grid-template-rows:56px 56px 56px;
+  gap:5px;pointer-events:all;
+}
+.mgame-dpad button{
+  width:56px;height:56px;border-radius:14px;
+  background:rgba(0,210,255,.13);
+  border:1.5px solid rgba(0,210,255,.38);
+  color:var(--c1);font-size:24px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;user-select:none;-webkit-user-select:none;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:none;
+}
+.mgame-dpad button.pressed,.mgame-dpad button:active{
+  background:rgba(0,210,255,.34);border-color:var(--c1);transform:scale(.91);
+}
+.mgame-dpad .dpad-empty{visibility:hidden;pointer-events:none;}
+.mgame-action-btns{
+  display:flex;flex-direction:column;gap:10px;
+  align-items:center;pointer-events:all;
+}
+.mgame-btn-shoot{
+  width:80px;height:80px;border-radius:50%;
+  background:rgba(0,210,255,.18);
+  border:2px solid rgba(0,210,255,.55);
+  color:#fff;font-size:30px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;user-select:none;-webkit-user-select:none;
+  -webkit-tap-highlight-color:transparent;touch-action:none;
+  box-shadow:0 0 22px rgba(0,210,255,.22);
+}
+.mgame-btn-shoot:active,.mgame-btn-shoot.pressed{background:rgba(0,210,255,.45);transform:scale(.91);}
+.mgame-btn-bomb{
+  width:56px;height:56px;border-radius:50%;
+  background:rgba(249,115,22,.15);
+  border:1.5px solid rgba(249,115,22,.42);
+  color:#fff;font-size:24px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;user-select:none;-webkit-user-select:none;
+  -webkit-tap-highlight-color:transparent;touch-action:none;
+}
+.mgame-btn-bomb:active,.mgame-btn-bomb.pressed{background:rgba(249,115,22,.42);transform:scale(.91);}
 </style>
 </head>
 <body>
@@ -544,6 +653,24 @@ body::before{
       <div id="game-over-stats" style="font-family:var(--font-display);font-size:11px;color:var(--muted);text-align:center;line-height:1.8;"></div>
       <div id="game-over-xp" style="font-family:var(--font-display);font-size:13px;color:var(--c4);"></div>
       <button onclick="startGame()" style="padding:11px 34px;background:color-mix(in srgb,var(--c1) 15%,transparent);border:1px solid var(--c1);border-radius:12px;color:var(--c1);font-family:var(--font-display);font-size:14px;font-weight:700;letter-spacing:3px;cursor:pointer;margin-top:6px;">ГРАТИ ЗНОВУ</button>
+    </div>
+    <!-- Mobile game controls -->
+    <div id="mobile-game-controls">
+      <div class="mgame-dpad">
+        <div class="dpad-empty"></div>
+        <button id="mbtn-up">▲</button>
+        <div class="dpad-empty"></div>
+        <button id="mbtn-left">◀</button>
+        <div class="dpad-empty"></div>
+        <button id="mbtn-right">▶</button>
+        <div class="dpad-empty"></div>
+        <button id="mbtn-down">▼</button>
+        <div class="dpad-empty"></div>
+      </div>
+      <div class="mgame-action-btns">
+        <button class="mgame-btn-shoot" id="mbtn-shoot">🔫</button>
+        <button class="mgame-btn-bomb" id="mbtn-bomb">💣</button>
+      </div>
     </div>
     <!-- Wave banner -->
     <div id="game-wave-screen" style="position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;z-index:4;">
@@ -2456,6 +2583,8 @@ function init3DSolarSystem(){
   }
 
   hiScore=parseInt(localStorage.getItem('cosmo_game_hi'))||0;
+  window._gameMobileTryShoot = tryShoot;
+  window._gameMobileActivateBomb = activateBomb;
 })();
 </script>
 </body>
